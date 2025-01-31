@@ -44,25 +44,10 @@ return [
         'provider' => 'users',
         'hash' => false, // Optional
     ],
-
-    'oem' => [
-        'driver' => 'sanctum', // Token-based auth for OEM users
-        'provider' => 'oem_users',
-    ],
-
-    'superadmin' => [
-        'driver' => 'sanctum', // Token-based auth for superadmin users
-        'provider' => 'users',
-    ],
 ],
 
 'providers' => [
     'users' => [
-        'driver' => 'eloquent',
-        'model' => App\Models\User::class,
-    ],
-    
-    'oem_users' => [
         'driver' => 'eloquent',
         'model' => App\Models\User::class,
     ],
