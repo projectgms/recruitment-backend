@@ -10,7 +10,7 @@ class ActivityLog extends Model
     use HasFactory;
     protected $fillable = [
        
-        'oem_id',
+       
         'user_id',
         'role_id',
         'log_type'

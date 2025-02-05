@@ -18,10 +18,10 @@ class CountryStateCityTableSeeder extends Seeder
      */
     public function run()
     {
-        Country::insertOrIgnore(CountryDataProvider::data());
-        State::insertOrIgnore(StateDataProvider::data());
-            foreach (collect(CityDataProvider::data())->chunk(15000) as $chunkCities) {
-                City::insertOrIgnore($chunkCities->toArray());
-        }
+        // Country::insertOrIgnore(CountryDataProvider::data());
+        // State::insertOrIgnore(StateDataProvider::data());
+        //     foreach (collect(CityDataProvider::data())->chunk(15000) as $chunkCities) {
+        //         City::insertOrIgnore($chunkCities->toArray());
+        // }
     }
 }

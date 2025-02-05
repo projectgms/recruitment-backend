@@ -14,23 +14,19 @@ return new class extends Migration
         if (!Schema::hasTable('users')) {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('bash_id');
-            $table->string('username');
-            $table->string('firstname');
-            $table->string('lastname');
+            $table->string('first_name');
+            $table->string('last_name');
             $table->string('email');
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('mobile');
-            $table->date('dob');
-            $table->integer('role_id');
             $table->string('role');
+            $table->text('profile_picture');
+            $table->text('location');
+            $table->string('oauth_provider');
             $table->integer('active');
             $table->string('status');
-            $table->rememberToken();
-            $table->dateTime('last_login_at');
-            $table->integer('created_by');
-            $table->integer('updated_by');
+            $table->dateTime('last_login');
+            $table->string('ip_address');
             $table->timestamps();
         });
     }

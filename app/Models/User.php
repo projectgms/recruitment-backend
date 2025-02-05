@@ -20,12 +20,12 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'username',
-        'firstname',
-        'lastname',
+        
+        'first_name',
+        'last_name',
         'email',
         'password',
-        'last_login_at',
+        'last_login',
     ];
     public static function generateRandomString($length = 8) {
         // Define the characters to use
