@@ -3,7 +3,10 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\Admin\AdminAuthController;
 
+//Recruiter
+use App\Http\Controllers\Recruiter\RecruiterAuthController;
 
 Route::get('/login', function () {
     return response()->json(['error' => 'Unauthorized.'], 401);
@@ -18,7 +21,7 @@ Route::prefix('v1')->group(function () {
 Route::get('welcome',[AuthController::class,'welcome']);
     // Admin API routes
 
-  //  Route::post('superadmin/login', [SuperadminAuthController::class, 'login']);
+   Route::post('admin/login', [AdminAuthController::class, 'login']);
     Route::middleware(['auth:sanctum'])->group(function () {
        // Route::get("superadmin/profile", [SuperadminAuthController::class, "profile"]);
       
@@ -27,8 +30,8 @@ Route::get('welcome',[AuthController::class,'welcome']);
 
 
     // Recruiter/Comapny API routes
-  //  Route::post('oem/login', [OEMAuthController::class, 'login']);
-   
+   Route::post('recruiter/login', [RecruiterAuthController::class, 'login']);
+   Route::post('recruiter/register',[RecruiterAuthController::class,'register']);
     Route::middleware(['auth:sanctum'])->group(function () {
         // Route::get('oem/profile', [OEMAuthController::class, 'profile']);
         
