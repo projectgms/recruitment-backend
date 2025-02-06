@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\AdminAuthController;
 //Recruiter
 use App\Http\Controllers\Recruiter\RecruiterAuthController;
 
+//JobSeeker
+use App\Http\Controllers\JobSeeker\JobSeekerAuthController;
+
 Route::get('/login', function () {
     return response()->json(['error' => 'Unauthorized.'], 401);
 })->name('login');
@@ -40,8 +43,8 @@ Route::get('welcome',[AuthController::class,'welcome']);
 
 
     // Job Seeker API routes
-    //Route::post('aggregater/login', [AggregaterAuthController::class, 'login']);
-    
+    Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
+    Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);
     Route::middleware(['auth:sanctum'])->group(function () {
 
      //   Route::get('aggregater/profile', [AggregaterAuthController::class, 'profile']);
