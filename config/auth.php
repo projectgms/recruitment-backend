@@ -40,7 +40,7 @@ return [
         'provider' => 'users',
     ],
     'api' => [
-        'driver' => 'sanctum', // For general API users
+        'driver' => 'jwt', // For general API users
         'provider' => 'users',
         'hash' => false, // Optional
     ],

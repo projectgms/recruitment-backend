@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 
 use Illuminate\Support\Facades\Hash;
@@ -49,19 +50,24 @@ class AdminAuthController extends Controller
                 
                 //$user->tokens()->where('name', 'mytoken')->delete();
                 // Generate a new Sanctum token
-                $token = $user->createToken("mytoken",['role:admin'])->plainTextToken;
                
                 $update_slogin=User::find($user->id);
     
                 $update_slogin->last_login=Carbon::now();
                 $update_slogin->save();
-                // Return success response with token and user data
-                return response()->json([
-                    "status" => true,
-                    "message" => "User Successfully Logged in",
-                    "token" => $token,
-                    "data" => $user  // You can return the user directly
-                ], 200);
+                $credentials = $request->only('email', 'password');
+
+                // Attempt to log the user in and generate the token
+                if ($token = JWTAuth::attempt($credentials)) 
+                {
+                    // Return success response with token and user data
+                    return response()->json([
+                        "status" => true,
+                        "message" => "User Successfully Logged in",
+                        "token" => $token,
+                        "data" => $user  // You can return the user directly
+                    ], 200);
+               }
             } else {
                 // If the user is not active, return an error
                 return response()->json([

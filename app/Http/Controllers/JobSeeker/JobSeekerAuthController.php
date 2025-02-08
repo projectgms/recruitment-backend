@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 
 use Illuminate\Support\Facades\Hash;
@@ -21,6 +22,7 @@ class JobSeekerAuthController extends Controller
 
     public function login(Request $request)
     {
+       
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
@@ -48,14 +50,16 @@ class JobSeekerAuthController extends Controller
             if ($user->active == "1") {
                 // Delete any existing tokens (if necessary)
                 
-                //$user->tokens()->where('name', 'mytoken')->delete();
-                // Generate a new Sanctum token
-                $token = $user->createToken("mytoken",['role:job_seeker'])->plainTextToken;
-               
+              
                 $update_slogin=User::find($user->id);
     
                 $update_slogin->last_login=Carbon::now();
                 $update_slogin->save();
+                $credentials = $request->only('email', 'password');
+
+                // Attempt to log the user in and generate the token
+                if ($token = JWTAuth::attempt($credentials)) {
+                   
                 // Return success response with token and user data
                 return response()->json([
                     "status" => true,
@@ -63,6 +67,7 @@ class JobSeekerAuthController extends Controller
                     "token" => $token,
                     "data" => $user  // You can return the user directly
                 ], 200);
+            }
             } else {
                 // If the user is not active, return an error
                 return response()->json([
@@ -87,9 +92,9 @@ class JobSeekerAuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
             'c_password' => 'required|same:password',
-            
-            'first_name' => 'required',
-            'last_name' => 'required',
+            'name'=>'required',
+            //'first_name' => 'required',
+           // 'last_name' => 'required',
           
         ], [
             'email.required' => 'Email is required.',
@@ -97,9 +102,9 @@ class JobSeekerAuthController extends Controller
             'password.required' => 'Password is required.',
             'c_password.required' => 'Confirm password is required.',
             'c_password.same' => 'Confirm password must match the password.',
-           
-            'first_name.required' => 'First name is required.',
-            'last_name.required' => 'Last name is required.',
+           'name.required' => 'Name is required.',
+          //  'first_name.required' => 'First name is required.',
+            //'last_name.required' => 'Last name is required.',
             
         ]);
         if ($validator->fails()) {
@@ -127,9 +132,10 @@ class JobSeekerAuthController extends Controller
         }else{
            
             $oemuser                = new User();
-           
-            $oemuser->first_name=$request->first_name;
-            $oemuser->last_name=$request->last_name;
+            $oemuser->name=$request->name;
+            $oemuser->bash_id=Str::uuid();
+           // $oemuser->first_name=$request->first_name;
+           // $oemuser->last_name=$request->last_name;
           
             $oemuser->email=$request->email;
             $oemuser->role='job_seeker';
@@ -144,5 +150,28 @@ class JobSeekerAuthController extends Controller
                 
             ], 200);
         }
+    }
+
+    public function profile()
+    {
+
+     
+        $user = JWTAuth::user();
+
+        // Check if user is null (if token is invalid or expired)
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+    
+        // Return the authenticated user data
+        return response()->json([
+            'status' => true,
+            'message' => 'Profile fetched successfully.',
+            'data' => $user,
+        ], 200);
+       
     }
 }
