@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 
 use Illuminate\Support\Facades\Hash;
@@ -45,23 +46,25 @@ class RecruiterAuthController extends Controller
     
             // Check if the user is active
             if ($user->active == "1") {
-                // Delete any existing tokens (if necessary)
-                
-                //$user->tokens()->where('name', 'mytoken')->delete();
-                // Generate a new Sanctum token
-                $token = $user->createToken("mytoken",['role:recruiter'])->plainTextToken;
-               
+              
                 $update_slogin=User::find($user->id);
     
                 $update_slogin->last_login=Carbon::now();
                 $update_slogin->save();
                 // Return success response with token and user data
-                return response()->json([
-                    "status" => true,
-                    "message" => "User Successfully Logged in",
-                    "token" => $token,
-                    "data" => $user  // You can return the user directly
-                ], 200);
+                $credentials = $request->only('email', 'password');
+
+                // Attempt to log the user in and generate the token
+                if ($token = JWTAuth::attempt($credentials)) 
+                {
+                
+                    return response()->json([
+                        "status" => true,
+                        "message" => "User Successfully Logged in",
+                        "token" => $token,
+                        "data" => $user  // You can return the user directly
+                    ], 200);
+                }
             } else {
                 // If the user is not active, return an error
                 return response()->json([

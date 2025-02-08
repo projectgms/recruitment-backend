@@ -45,9 +45,9 @@ Route::get('welcome',[AuthController::class,'welcome']);
     // Job Seeker API routes
     Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
     Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
 
-     //   Route::get('aggregater/profile', [AggregaterAuthController::class, 'profile']);
+       Route::get('jobseeker/profile', [JobSeekerAuthController::class, 'profile']);
       
 
     });

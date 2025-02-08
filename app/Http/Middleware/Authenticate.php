@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Support\Facades\Log;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Closure;
@@ -18,25 +19,38 @@ class Authenticate extends Middleware
 
     public function handle($request, Closure $next, ...$guards)
     {
-        // Get the bearer token from the request
-       //Check if the user is authenticated for any of the guards
-       if (empty($guards)) {
-        $guards = ['api']; // Default to API guard
-    }
-
-    foreach ($guards as $guard) {
-        if (Auth::guard($guard)->check()) {
-            // Log the active guard and user information
-            // Log::info('Active Guard:', [
-            //     'guard' => $guard,
-            //     'user' => Auth::guard($guard)->user(),
-            // ]);
-            return $next($request);
+        if (empty($guards)) {
+            $guards = ['api']; // Default to API guard
         }
-    }
 
-    // If no user is authenticated for any guard, return unauthorized response
-    return response()->json(['error' => 'Unauthorized'], 401);
+        foreach ($guards as $guard) {
+            // Check if the guard is the API and the user is authenticated
+            if ($guard === 'api') {
+                // Attempt to authenticate using JWT
+                try {
+                    // If JWT is valid, user will be authenticated, otherwise an exception will be thrown
+                    $user = JWTAuth::parseToken()->authenticate();
 
+                    if ($user) {
+                        // Proceed to the next middleware or controller action
+                        return $next($request);
+                    } else {
+                        // Token is invalid, return unauthorized response
+                        return response()->json(['error' => 'Unauthorized'], 401);
+                    }
+                } catch (\Exception $e) {
+                    // If there is an error (e.g., token missing, expired), return unauthorized response
+                    return response()->json(['error' => 'Unauthorized'], 401);
+                }
+            }
+
+            // Check other guards here if needed
+            if (Auth::guard($guard)->check()) {
+                return $next($request);
+            }
+        }
+
+        // If no user is authenticated for any guard, return unauthorized response
+        return response()->json(['error' => 'Unauthorized'], 401);
     }
 }
