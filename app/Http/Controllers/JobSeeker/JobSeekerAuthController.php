@@ -131,7 +131,7 @@ class JobSeekerAuthController extends Controller
             ]);
         }else{
            
-            $oemuser                = new User();
+            $oemuser = new User();
             $oemuser->name=$request->name;
             $oemuser->bash_id=Str::uuid();
            // $oemuser->first_name=$request->first_name;
