@@ -90,20 +90,16 @@ class RecruiterAuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
             'c_password' => 'required|same:password',
-            
-            'first_name' => 'required',
-            'last_name' => 'required',
-          
+            'name'=>'required',
+      
         ], [
             'email.required' => 'Email is required.',
             'email.email' => 'Email must be a valid email address.',
             'password.required' => 'Password is required.',
             'c_password.required' => 'Confirm password is required.',
             'c_password.same' => 'Confirm password must match the password.',
-           
-            'first_name.required' => 'First name is required.',
-            'last_name.required' => 'Last name is required.',
-            
+            'name.required'=>'Name is required.'
+          
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -114,8 +110,6 @@ class RecruiterAuthController extends Controller
         }
         $check_user=User::where('email',$request->email)
         ->count();
-       
-
         if( $check_user>0)
         {
             return response()->json([
@@ -129,14 +123,15 @@ class RecruiterAuthController extends Controller
             ]);
         }else{
            
-            $oemuser                = new User();
-           
-            $oemuser->first_name=$request->first_name;
-            $oemuser->last_name=$request->last_name;
+           $oemuser = new User();
+           $oemuser->name=$request->name;
+           $oemuser->bash_id=Str::uuid();
+           // $oemuser->first_name=$request->first_name;
+            //$oemuser->last_name=$request->last_name;
           
             $oemuser->email=$request->email;
             $oemuser->role='recruiter';
-           $oemuser->password=bcrypt($request->password);
+            $oemuser->password=bcrypt($request->password);
           
             $oemuser->save();
          
