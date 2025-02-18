@@ -35,7 +35,7 @@ Route::get('welcome',[AuthController::class,'welcome']);
     // Recruiter/Comapny API routes
    Route::post('recruiter/login', [RecruiterAuthController::class, 'login']);
    Route::post('recruiter/register',[RecruiterAuthController::class,'register']);
-    Route::middleware(['auth:sanctum'])->group(function () {
+    Route::middleware(['auth:api'])->group(function () {
         // Route::get('oem/profile', [OEMAuthController::class, 'profile']);
         
     });
