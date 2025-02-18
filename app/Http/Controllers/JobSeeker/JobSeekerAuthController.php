@@ -93,6 +93,7 @@ class JobSeekerAuthController extends Controller
             'password' => 'required',
             'c_password' => 'required|same:password',
             'name'=>'required',
+           
             //'first_name' => 'required',
            // 'last_name' => 'required',
           
@@ -103,6 +104,7 @@ class JobSeekerAuthController extends Controller
             'c_password.required' => 'Confirm password is required.',
             'c_password.same' => 'Confirm password must match the password.',
            'name.required' => 'Name is required.',
+          
           //  'first_name.required' => 'First name is required.',
             //'last_name.required' => 'Last name is required.',
             

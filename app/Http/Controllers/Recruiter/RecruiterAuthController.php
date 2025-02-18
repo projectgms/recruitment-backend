@@ -91,14 +91,17 @@ class RecruiterAuthController extends Controller
             'password' => 'required',
             'c_password' => 'required|same:password',
             'name'=>'required',
-      
+            'company'=>'required',
+            'mobile'=>'required'
         ], [
             'email.required' => 'Email is required.',
             'email.email' => 'Email must be a valid email address.',
             'password.required' => 'Password is required.',
             'c_password.required' => 'Confirm password is required.',
             'c_password.same' => 'Confirm password must match the password.',
-            'name.required'=>'Name is required.'
+            'name.required'=>'Name is required.',
+            'company.required'=>'Company Name is required',
+            'mobile.required'=>'Mobile Number is required'
           
         ]);
         if ($validator->fails()) {
@@ -132,9 +135,11 @@ class RecruiterAuthController extends Controller
             $oemuser->email=$request->email;
             $oemuser->role='recruiter';
             $oemuser->password=bcrypt($request->password);
+            
           
             $oemuser->save();
          
+
 
             return response()->json([
                 'status' => true,
