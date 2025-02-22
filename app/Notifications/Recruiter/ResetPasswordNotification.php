@@ -1,26 +1,21 @@
 <?php
 
-namespace App\Notifications;
+namespace App\Notifications\Recruiter;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class OemRegisterNotification extends Notification
+class ResetPasswordNotification extends Notification
 {
     use Queueable;
 
-    /**
-     * Create a new notification instance.
-     */
-    public $email;
-    public $password;
+    public $token;
 
-    public function __construct($email,$password)
+    public function __construct($token)
     {
-        $this->email = $email;
-        $this->password=$password;
+        $this->token = $token;
     }
 
     /**
@@ -38,15 +33,17 @@ class OemRegisterNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $frontendUrl = env('OEM_FRONTEND_URL'); 
+        $frontendUrl = env('RECRUITER_FRONTEND_URL'); // e.g., https://gms-sdv-oem.vercel.app/auth/newpassword
+
+        // Construct the reset link
+        $url = "{$frontendUrl}?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset());
+
         return (new MailMessage)
-                    ->line('Thank you for the registration.')
-                    ->line('Your Login Details Below,')
-                    ->line('Email -'.$this->email)
-                    ->line('Password -'.$this->password)
-                   // ->action('URL', url('/'))
-                   ->action('URL', $frontendUrl)
-                    ->line('Thank you for using our application!');
+            ->subject('Reset Password Notification')
+            ->line('You are receiving this email because we received a password reset request for your account.')
+            ->action('Reset Password', $url)
+            ->line('If you did not request a password reset, no further action is required.');
+ 
     }
 
     /**

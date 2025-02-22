@@ -22,52 +22,50 @@ class JobSeekerAuthController extends Controller
 
     public function login(Request $request)
     {
-       
+
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-           
+            'oauth_provider' => 'required',
+
         ], [
             'email.required' => 'Email is required.',
             'password.required' => 'Password is required.',
-            
+            'oauth_provider.required' => 'OAuth Provider is required.'
         ]);
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
-                'message' =>$validator->errors(),
-                
+                'message' => $validator->errors(),
+
             ], 422);
         }
 
         // Find the user by email and role
         $user = User::where('email', $request->email)->where('role', 'job_seeker')->first();
-        
+
         // Check if the user exists and the password is correct
         if ($user && Hash::check($request->password, $user->password)) {
-    
+
             // Check if the user is active
             if ($user->active == "1") {
                 // Delete any existing tokens (if necessary)
-                
-              
-                $update_slogin=User::find($user->id);
-    
-                $update_slogin->last_login=Carbon::now();
-                $update_slogin->save();
+                $user->oauth_provider = $request->oauth_provider;
+                $user->last_login = Carbon::now();
+                $user->save();
                 $credentials = $request->only('email', 'password');
 
                 // Attempt to log the user in and generate the token
                 if ($token = JWTAuth::attempt($credentials)) {
-                   
-                // Return success response with token and user data
-                return response()->json([
-                    "status" => true,
-                    "message" => "User Successfully Logged in",
-                    "token" => $token,
-                    "data" => $user  // You can return the user directly
-                ], 200);
-            }
+
+                    // Return success response with token and user data
+                    return response()->json([
+                        "status" => true,
+                        "message" => "User Successfully Logged in",
+                        "token" => $token,
+                        "data" => $user  // You can return the user directly
+                    ], 200);
+                }
             } else {
                 // If the user is not active, return an error
                 return response()->json([
@@ -91,65 +89,65 @@ class JobSeekerAuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-            'c_password' => 'required|same:password',
-            'name'=>'required',
-           
+            'mobile' => 'required',
+            'name' => 'required',
+
             //'first_name' => 'required',
-           // 'last_name' => 'required',
-          
+            // 'last_name' => 'required',
+
         ], [
+            'name.required' => 'Name is required.',
             'email.required' => 'Email is required.',
             'email.email' => 'Email must be a valid email address.',
-            'password.required' => 'Password is required.',
-            'c_password.required' => 'Confirm password is required.',
-            'c_password.same' => 'Confirm password must match the password.',
-           'name.required' => 'Name is required.',
-          
-          //  'first_name.required' => 'First name is required.',
+            'mobile.required' => 'Mobile Number is required.',
+            'password.required' => 'Password is required.'
+
+            //  'first_name.required' => 'First name is required.',
             //'last_name.required' => 'Last name is required.',
-            
+
         ]);
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
                 'message' => $validator->errors(),
-               
+
             ], 422);
         }
-        $check_user=User::where('email',$request->email)
-        ->count();
-       
+        $check_user = User::where('email', $request->email)
+            ->count();
 
-        if( $check_user>0)
-        {
+        $check_user_mobile = User::where('mobile', $request->mobile)
+            ->count();
+        if ($check_user > 0) {
             return response()->json([
                 'status' => false,
-                'message' => 'Already User Email  Added .',
+                'message' => 'User email already Signup.',
             ]);
-        }else if($request->password!=$request->c_password){
+        } else if ($check_user_mobile > 0) {
             return response()->json([
                 'status' => false,
-                'message' => 'Password and Confirm Password not match.',
+                'message' => 'User mobile already Signup.',
             ]);
-        }else{
-           
+        } else {
+
             $oemuser = new User();
-            $oemuser->name=$request->name;
-            $oemuser->bash_id=Str::uuid();
-           // $oemuser->first_name=$request->first_name;
-           // $oemuser->last_name=$request->last_name;
-          
-            $oemuser->email=$request->email;
-            $oemuser->role='job_seeker';
-            $oemuser->password=bcrypt($request->password);
-          
+            $oemuser->name = $request->name;
+            $oemuser->bash_id = Str::uuid();
+            $oemuser->mobile = $request->mobile;
+            // $oemuser->first_name=$request->first_name;
+            // $oemuser->last_name=$request->last_name;
+
+            $oemuser->email = $request->email;
+            $oemuser->role = 'job_seeker';
+            $oemuser->password = bcrypt($request->password);
+
             $oemuser->save();
-         
+
 
             return response()->json([
                 'status' => true,
                 'message' => 'success'
-                
+
             ], 200);
         }
     }
@@ -157,7 +155,7 @@ class JobSeekerAuthController extends Controller
     public function profile()
     {
 
-     
+
         $user = JWTAuth::user();
 
         // Check if user is null (if token is invalid or expired)
@@ -167,13 +165,12 @@ class JobSeekerAuthController extends Controller
                 'message' => 'Unauthorized, invalid token.',
             ], 401);
         }
-    
+
         // Return the authenticated user data
         return response()->json([
             'status' => true,
             'message' => 'Profile fetched successfully.',
             'data' => $user,
         ], 200);
-       
     }
 }

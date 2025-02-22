@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Notifications;
+namespace App\Notifications\JobSeeker;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -33,7 +33,7 @@ class ResetPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $frontendUrl = env('OEM_FRONTEND_URL'); // e.g., https://gms-sdv-oem.vercel.app/auth/newpassword
+        $frontendUrl = env('JOBSEEKER_FRONTEND_URL'); // e.g., https://gms-sdv-oem.vercel.app/auth/newpassword
 
         // Construct the reset link
         $url = "{$frontendUrl}?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset());

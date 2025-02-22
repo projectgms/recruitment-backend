@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\Company;
+
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 
@@ -24,10 +26,12 @@ class RecruiterAuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
+            'oauth_provider'=>'required',
            
         ], [
             'email.required' => 'Email is required.',
             'password.required' => 'Password is required.',
+            'oauth_provider'=>'Oauth Provide is required.'
             
         ]);
         if ($validator->fails()) {
@@ -47,10 +51,10 @@ class RecruiterAuthController extends Controller
             // Check if the user is active
             if ($user->active == "1") {
               
-                $update_slogin=User::find($user->id);
-    
-                $update_slogin->last_login=Carbon::now();
-                $update_slogin->save();
+             
+                $user->oauth_provider=$request->oauth_provider;
+                $user->last_login=Carbon::now();
+                $user->save();
                 // Return success response with token and user data
                 $credentials = $request->only('email', 'password');
 
@@ -89,7 +93,6 @@ class RecruiterAuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
-            'c_password' => 'required|same:password',
             'name'=>'required',
             'company'=>'required',
             'mobile'=>'required'
@@ -97,8 +100,6 @@ class RecruiterAuthController extends Controller
             'email.required' => 'Email is required.',
             'email.email' => 'Email must be a valid email address.',
             'password.required' => 'Password is required.',
-            'c_password.required' => 'Confirm password is required.',
-            'c_password.same' => 'Confirm password must match the password.',
             'name.required'=>'Name is required.',
             'company.required'=>'Company Name is required',
             'mobile.required'=>'Mobile Number is required'
@@ -113,16 +114,19 @@ class RecruiterAuthController extends Controller
         }
         $check_user=User::where('email',$request->email)
         ->count();
+
+        $check_user_mobile=User::where('mobile',$request->mobile)
+        ->count();
         if( $check_user>0)
         {
             return response()->json([
                 'status' => false,
-                'message' => 'Already User Email  Added .',
+                'message' => 'User email already Signup.',
             ]);
-        }else if($request->password!=$request->c_password){
+        }else if($check_user_mobile>0){
             return response()->json([
-                'status' => false,
-                'message' => 'Password and Confirm Password not match.',
+                'status'=>false,
+                'message'=>'User mobile already Signup.',
             ]);
         }else{
            
@@ -135,10 +139,15 @@ class RecruiterAuthController extends Controller
             $oemuser->email=$request->email;
             $oemuser->role='recruiter';
             $oemuser->password=bcrypt($request->password);
-            
-          
+            $oemuser->mobile=$request->mobile;
             $oemuser->save();
+            
          
+            $company = new Company();
+            $company->bash_id=Str::uuid();
+            $company->user_id = $oemuser->id; // Assign the new user ID
+            $company->name = $request->company; // Assign the company name
+            $company->save(); // Save the company record
 
 
             return response()->json([
