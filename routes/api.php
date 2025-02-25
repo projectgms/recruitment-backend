@@ -57,7 +57,18 @@ Route::get('welcome',[AuthController::class,'welcome']);
 
        Route::get('jobseeker/profile', [JobSeekerAuthController::class, 'profile']);
        Route::post('jobseeker/personal_info',[JobSeekerProfileController::class,'personal_info']);
+       Route::get('jobseeker/get_personal_info',[JobSeekerProfileController::class,'get_personal_info']);
 
+       Route::post('jobseeker/contact_details',[JobSeekerProfileController::class,'contact_details']);
+       Route::get('jobseeker/get_contact_details',[JobSeekerProfileController::class,'get_contact_details']);
+
+       Route::post('jobseeker/add_document',[JobSeekerProfileController::class,'add_document']);
+       Route::post('jobseeker/delete_document',[JobSeekerProfileController::class,'delete_document']);
+       Route::get('jobseeker/get_document',[JobSeekerProfileController::class,'get_document']);
+
+       Route::post('jobseeker/add_professional_exp',[JobSeekerProfileController::class,'add_professional_exp']);
+       Route::get('jobseeker/get_professional_exp',[JobSeekerProfileController::class,'get_professional_exp']);
+       Route::post('jobseeker/update_professional_exp',[JobSeekerProfileController::class,'update_professional_exp']);
     });
 
   
