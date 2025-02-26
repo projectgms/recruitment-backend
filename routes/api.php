@@ -69,6 +69,28 @@ Route::get('welcome',[AuthController::class,'welcome']);
        Route::post('jobseeker/add_professional_exp',[JobSeekerProfileController::class,'add_professional_exp']);
        Route::get('jobseeker/get_professional_exp',[JobSeekerProfileController::class,'get_professional_exp']);
        Route::post('jobseeker/update_professional_exp',[JobSeekerProfileController::class,'update_professional_exp']);
+       Route::post('jobseeker/delete_professional_exp',[JobSeekerProfileController::class,'delete_professional_exp']);
+
+       Route::post('jobseeker/add_internship',[JobSeekerProfileController::class,'add_internship']);
+       Route::get('jobseeker/get_internship',[JobSeekerProfileController::class,'get_internship']);
+       Route::post('jobseeker/update_internship',[JobSeekerProfileController::class,'update_internship']);
+       Route::post('jobseeker/delete_internship',[JobSeekerProfileController::class,'delete_internship']);
+
+       Route::post('jobseeker/add_project',[JobSeekerProfileController::class,'add_project']);
+       Route::get('jobseeker/get_project',[JobSeekerProfileController::class,'get_project']);
+       Route::post('jobseeker/update_project',[JobSeekerProfileController::class,'update_project']);
+       Route::post('jobseeker/delete_project',[JobSeekerProfileController::class,'delete_project']);
+
+       Route::post('jobseeker/add_research_paper',[JobSeekerProfileController::class,'add_research_paper']);
+       Route::get('jobseeker/get_research_paper',[JobSeekerProfileController::class,'get_research_paper']);
+       Route::post('jobseeker/update_research_paper',[JobSeekerProfileController::class,'update_research_paper']);
+       Route::post('jobseeker/delete_research_paper',[JobSeekerProfileController::class,'delete_research_paper']);
+
+       Route::post('jobseeker/add_training',[JobSeekerProfileController::class,'add_training']);
+       Route::get('jobseeker/get_training',[JobSeekerProfileController::class,'get_training']);
+       Route::post('jobseeker/update_training',[JobSeekerProfileController::class,'update_training']);
+       Route::post('jobseeker/delete_training',[JobSeekerProfileController::class,'delete_training']);
+
     });
 
   
