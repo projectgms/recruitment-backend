@@ -22,6 +22,8 @@ return new class extends Migration
                 $table->string('zipcode')->nullable();
                 $table->string('course')->nullable();
                 $table->string('primary_specialization')->nullable();
+                $table->integer('total_year_exp');
+                $table->integer('total_month_exp');
                 $table->string('dream_company')->nullable();
                 $table->string('secondary_mobile')->nullable();
                 $table->string('secondary_email')->nullable();

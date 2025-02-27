@@ -20,6 +20,8 @@ class JobSeekerContactDetails extends Model
         'course',
         'primary_specialization',
         'dream_company',
+        'total_year_exp',
+        'total_month_exp',
         'secondary_mobile',
         'secondary_email',
         'linkedin_url',
