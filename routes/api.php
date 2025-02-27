@@ -101,6 +101,9 @@ Route::get('welcome',[AuthController::class,'welcome']);
        Route::post('jobseeker/update_education',[JobSeekerProfileController::class,'update_education']);
        Route::post('jobseeker/delete_education',[JobSeekerProfileController::class,'delete_education']);
 
+       Route::post('jobseeker/profile_other_details',[JobSeekerProfileController::class,'profile_other_details']);
+       Route::get('jobseeker/get_profile_other_details',[JobSeekerProfileController::class,'get_profile_other_details']);
+
     });
 
   

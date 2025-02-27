@@ -52,6 +52,8 @@ class JobSeekerProfileController extends Controller
             'knownLanguages.*' => 'string',
             'medicalHistory' => 'required',
             'dreamCompany' => 'required',
+            'totalExpYear' => 'required',
+            'totalExpMonth' => 'required',
         ], [
             'profilePicture.required' => 'profilePicture is required.',
             'firstName.required' => 'firstName is required.',
@@ -71,7 +73,9 @@ class JobSeekerProfileController extends Controller
             'disability.required' => 'disability is required.',
             'knownLanguages.required' => 'knownLanguages is required.',
             'medicalHistory.required' => 'medicalHistory is required.',
-            'dreamCompany.required' => 'dreamCompany is required.'
+            'dreamCompany.required' => 'dreamCompany is required.',
+            'totalExpYear.required' => 'total year Exp is required',
+            'totalExpMonth.required' => 'total month Exp is required',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -125,6 +129,8 @@ class JobSeekerProfileController extends Controller
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
             $contact->dream_company = $request->dreamCompany;
+            $contact->total_year_exp = $request->totalExpYear;
+            $contact->total_month_exp = $request->totalExpMonth;
 
             $contact->save();
             return response()->json(['status' => true, 'message' => 'Personal Information Added.'], 200);
@@ -138,6 +144,8 @@ class JobSeekerProfileController extends Controller
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
             $contact->dream_company = $request->dreamCompany;
+            $contact->total_year_exp = $request->totalExpYear;
+            $contact->total_month_exp = $request->totalExpMonth;
             $contact->save();
             return response()->json(['status' => true, 'message' => 'Personal Information Updated.'], 200);
         }
@@ -205,15 +213,17 @@ class JobSeekerProfileController extends Controller
             $contact->linkedin_url = $request->linkedInUrl;
             $contact->github_url = $request->githubUrl;
             $contact->save();
-            return response()->json(['status' => false, 'message' => 'Contact Details Updated']);
+            return response()->json(['status' => true, 'message' => 'Contact Details Updated']);
         } else {
             $contact = new JobSeekerContactDetails();
+            $contact->user_id= $auth->id;
+            $contact->bash_id= Str::uuid();
             $contact->secondary_mobile = $request->secondaryPhone;
             $contact->secondary_email = $request->otherEmail;
             $contact->linkedin_url = $request->linkedInUrl;
             $contact->github_url = $request->githubUrl;
             $contact->save();
-            return response()->json(['status' => false, 'message' => 'Contact Details Added']);
+            return response()->json(['status' => true, 'message' => 'Contact Details Added']);
         }
     }
 
@@ -452,8 +462,15 @@ class JobSeekerProfileController extends Controller
                 $existingExperiences = []; // Initialize as empty array if it's not a valid array
             }
 
-            $maxExperienceId = max(array_column($existingExperiences, 'exp_id')) ?? 0;
+           
+            if (!empty($existingExperiences)) {
+                // Find the maximum education_id from the existing array
+                $maxExperienceId = max(array_column($existingExperiences, 'exp_id')) ?? 0;
 
+            } else {
+                // If empty, set a default education_id
+                $maxExperienceId = 0;
+            }
             // Assign new certification_ids starting from the max + 1
             foreach ($experiences as &$newExperience) {
                 $maxExperienceId++;
@@ -678,8 +695,14 @@ class JobSeekerProfileController extends Controller
                 $existingInternships = []; // Initialize as empty array if it's not a valid array
             }
 
-            $maxInternshipId = max(array_column($existingInternships, 'internship_id')) ?? 0;
-
+           
+            if (!empty($existingInternships)) {
+                // Find the maximum education_id from the existing array
+                $maxInternshipId = max(array_column($existingInternships, 'internship_id')) ?? 0;
+            } else {
+                // If empty, set a default education_id
+                $maxInternshipId = 0;
+            }
             // Assign new certification_ids starting from the max + 1
             foreach ($internships as &$newInternship) {
                 $maxInternshipId++;
@@ -899,8 +922,14 @@ class JobSeekerProfileController extends Controller
                 $existingProject = []; // Initialize as empty array if it's not a valid array
             }
 
-            $maxProjectId = max(array_column($existingProject, 'project_id')) ?? 0;
-
+          
+            if (!empty($existingProject)) {
+                // Find the maximum education_id from the existing array
+                $maxProjectId = max(array_column($existingProject, 'project_id')) ?? 0;
+            } else {
+                // If empty, set a default education_id
+                $maxProjectId = 0;
+            }
             // Assign new certification_ids starting from the max + 1
             foreach ($projects as &$newProject) {
                 $maxProjectId++;
@@ -1119,8 +1148,14 @@ class JobSeekerProfileController extends Controller
                 $existingPublication = []; // Initialize as empty array if it's not a valid array
             }
 
-            $maxPublicationId = max(array_column($existingPublication, 'publication_id')) ?? 0;
-
+           
+            if (!empty($existingPublication)) {
+                // Find the maximum education_id from the existing array
+                $maxPublicationId = max(array_column($existingPublication, 'publication_id')) ?? 0;
+            } else {
+                // If empty, set a default education_id
+                $maxPublicationId = 0;
+            }
             // Assign new certification_ids starting from the max + 1
             foreach ($publications as &$newPublication) {
                 $maxPublicationId++;
@@ -1338,8 +1373,14 @@ class JobSeekerProfileController extends Controller
                 $existingTrainig = []; // Initialize as empty array if it's not a valid array
             }
 
-            $maxTrainingId = max(array_column($existingTrainig, 'training_id')) ?? 0;
-
+           
+            if (!empty($existingTrainig)) {
+                // Find the maximum education_id from the existing array
+                $maxTrainingId = max(array_column($existingTrainig, 'training_id')) ?? 0;
+            } else {
+                // If empty, set a default education_id
+                $maxTrainingId = 0;
+            }
             // Assign new certification_ids starting from the max + 1
             foreach ($trainings as &$newTraining) {
                 $maxTrainingId++;
@@ -1557,8 +1598,15 @@ class JobSeekerProfileController extends Controller
                 $existingCertification = []; // Initialize as empty array if it's not a valid array
             }
           
-            $maxCertificationId = max(array_column($existingCertification, 'certification_id')) ?? 0;
-
+          
+            if (!empty($existingCertification)) {
+                // Find the maximum education_id from the existing array
+                $maxCertificationId = max(array_column($existingCertification, 'certification_id')) ?? 0;
+            } else {
+                // If empty, set a default education_id
+                $maxCertificationId = 0;
+            }
+            
             // Assign new certification_ids starting from the max + 1
             foreach ($certifications as &$newCertification) {
                 $maxCertificationId++;
@@ -1727,4 +1775,312 @@ class JobSeekerProfileController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    public function add_education(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Validate input
+        $validator = Validator::make($request->all(), [
+            'educations' => 'required|array',
+
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+
+
+        $educations = [];
+
+        // Handle file uploads
+        $i = 1;
+        foreach ($request->educations as $key => $education) {
+
+            // Store JSON data with updated file path
+            $educations[] = [
+                "type" => $education['type'], // Adding type (e.g. 10th, 12th)
+                "data" => [
+                    "education_id" => $i,
+                    "qualification" => $education['data']['qualification'] ?? null,
+                    "stream" => $education['data']['stream'] ?? null,
+                    "college" => $education['data']['college'] ?? null,
+                    "collegeCity" => $education['data']['collegeCity'] ?? null,
+                    "joiningYear" => $education['data']['joiningYear'] ?? null,
+                    "completionYear" => $education['data']['completionYear'] ?? null,
+                    "graduationType" => $education['data']['graduationType'] ?? null,
+                    "aggregateType" => $education['data']['aggregateType'] ?? null,
+                    "aggregate" => $education['data']['aggregate'] ?? null,
+                    "max" => $education['data']['max'] ?? null,
+                    "activeBacklogs" => $education['data']['activeBacklogs'] ?? null
+                ]
+            ];
+            $i++;
+        }
+
+        $userEducation = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
+       
+        if ($userEducation) {
+            $existingEducation = json_decode($userEducation->educations, true);
+
+            // Check if the internship field is empty or not in array format
+            if (!is_array($existingEducation)) {
+                $existingEducation = []; // Initialize as empty array if it's not a valid array
+            }
+           
+            if (!empty($existingEducation)) {
+                // Find the maximum education_id from the existing array
+                $maxEducationId = max(array_column($existingEducation, 'data.education_id'));
+            } else {
+                // If empty, set a default education_id
+                $maxEducationId = 0;
+            }
+            
+           
+            // Assign new certification_ids starting from the max + 1
+            foreach ($educations as &$newEducation) {
+                $maxEducationId++;
+                $newEducation['data']['education_id'] = $maxEducationId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userEducation->educations = json_encode(array_merge($existingEducation, $educations), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
+            $userEducation->save();
+        } else {
+            // If no existing record, create a new one
+            $userEducation = JobSeekerEducationDetails::create([
+                'user_id' => $auth->id,
+                'bash_id' => Str::uuid(),
+                'educations' => $educations, // Store the array directly
+            ]);
+        }
+
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Education Added successfully!',
+
+        ], 200);
+    }
+
+    public function get_education()
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $userEducation = JobSeekerEducationDetails::select('educations')->where('user_id', $auth->id)->first();
+        return response()->json([
+            'status' => true,
+            'message' => 'Education List',
+            'data' => json_decode($userEducation)
+        ], 200);
+    }
+
+    public function update_education(Request $request)
+    {
+        try {
+            $auth = JWTAuth::user();
+            if (!$auth) {
+                return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // Validate input
+            $validator = Validator::make($request->all(), [
+                'education_id' => 'required|integer',
+                'educations' => 'required|array', // Make sure experience data is passed in the request
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+            }
+
+            $education_id = $request->education_id;
+            $newEducationData = $request->educations; // The updated experience data
+
+            // Find the user document record
+            $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')->where('user_id', $auth->id)->first();
+            if (!$userEducation) {
+                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
+            }
+
+            // Decode the existing experience JSON data
+            $educations = json_decode($userEducation->educations, true);
+
+            // Ensure that experience is an array and not a string
+            if (!is_array($educations)) {
+                return response()->json(['status' => false, 'message' => 'Certification field is not an array.'], 422);
+            }
+
+            // Find the specific experience record by exp_id
+            $find_education_id = collect($educations)->firstWhere('education_id', $education_id);
+
+            if (!$find_education_id) {
+                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
+            }
+
+            // Find the index of the experience
+            $index = collect($educations)->search(function ($education) use ($education_id) {
+                return $education['education_id'] === $education_id;
+            });
+
+            // Merge the new data with the existing experience data
+            $educations[$index] = array_merge($educations[$index], $newEducationData);
+
+
+            // Save the updated experiences back to the database
+            $userEducation->educations = json_encode($educations, JSON_PRETTY_PRINT);
+            $userEducation->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Educations updated successfully!',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function delete_education(Request $request)
+    {
+        try {
+            $auth = JWTAuth::user();
+            if (!$auth) {
+                return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // Validate input
+            $validator = Validator::make($request->all(), [
+                'education_id' => 'required',
+
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+            }
+            $education_id = $request->education_id;
+
+            // Find the user document record
+            $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')->where('user_id', $auth->id)->first();
+
+            if (!$userEducation) {
+                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
+            }
+
+            $educations = json_decode($userEducation->educations, true);
+
+            // Ensure that documents is an array and not a string
+            if (!is_array($educations)) {
+                return response()->json(['status' => false, 'message' => 'education field is not an array.'], 422);
+            }
+
+            $educationToDelete = collect($educations)->firstWhere('education_id', $education_id);
+
+
+            if (!$educationToDelete) {
+                return response()->json(['status' => false, 'message' => 'Education ID not found.'], 404);
+            }
+
+
+            // Remove the document from the documents array
+            $updatedEducation = collect($educations)->reject(function ($item) use ($education_id) {
+                return $item['education_id'] == $education_id;
+            })->values()->all();
+
+
+            // Re-encode the documents array to JSON and save it back to the database
+            $userEducation->educations = json_encode($updatedEducation);
+            $userEducation->save();
+
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Education deleted successfully!',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function profile_other_details(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'summary' => 'required',
+            'expertise' => 'required|array',
+            'extraCurricular'=>'null|array',
+            'achievements'=>'null|array'
+          
+
+        ], [
+            'summary.required' => 'Summary is required.',
+            'expertise.required' => 'Skill is required.',
+           
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
+        if ($other_details) {
+            $other_details->summary = $request->summary;
+            $other_details->skills = $request->expertise;
+            $other_details->achievement = $request->achievements;
+            $other_details->extra_curricular = $request->extraCurricular;
+            $other_details->save();
+            return response()->json(['status' => true, 'message' => 'Other Details Updated']);
+        } else {
+            $other_details = new JobSeekerProfessionalDetails();
+            $other_details->user_id= $auth->id;
+            $other_details->bash_id= Str::uuid();
+            $other_details->summary = $request->summary;
+            $other_details->skills = $request->expertise;
+            $other_details->achievement = $request->achievements;
+            $other_details->extra_curricular = $request->extraCurricular;
+            $other_details->save();
+            return response()->json(['status' => true, 'message' => 'Other Details Added']);
+        }
+    }
+    public function get_profile_other_details()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $contact_data = JobSeekerProfessionalDetails::select('summary', 'skills', 'achievement', 'extra_curricular')
+
+            ->where('user_id', $auth->id)
+
+            ->first();
+        return response()->json([
+            'status' => true,
+            'message' => 'Get Other Information.',
+            'data' => $contact_data
+        ]);
+    }
+
 }

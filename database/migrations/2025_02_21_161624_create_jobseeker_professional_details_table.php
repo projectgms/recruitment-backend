@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->json('experience')->nullable();
                 $table->json('internship')->nullable();
                 $table->json('projects')->nullable();
-                $table->text('summery')->nullable();
+                $table->text('summary')->nullable();
                 $table->text('skills')->nullable();
                 $table->text('achievement')->nullable();
                 $table->text('awards')->nullable();
