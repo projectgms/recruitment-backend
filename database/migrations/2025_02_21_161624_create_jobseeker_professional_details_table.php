@@ -16,14 +16,14 @@ return new class extends Migration
                 $table->id();
                 $table->integer('user_id');
                 $table->string('bash_id')->unique();
-                $table->json('experience');
-                $table->json('internship');
-                $table->json('projects');
-                $table->text('summery');
-                $table->text('skills');
-                $table->text('achievement');
-                $table->text('awards');
-                $table->text('hobbies');
+                $table->json('experience')->nullable();
+                $table->json('internship')->nullable();
+                $table->json('projects')->nullable();
+                $table->text('summery')->nullable();
+                $table->text('skills')->nullable();
+                $table->text('achievement')->nullable();
+                $table->text('awards')->nullable();
+                $table->text('hobbies')->nullable();
 
                 $table->timestamps();
             });
