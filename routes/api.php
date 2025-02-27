@@ -91,6 +91,16 @@ Route::get('welcome',[AuthController::class,'welcome']);
        Route::post('jobseeker/update_training',[JobSeekerProfileController::class,'update_training']);
        Route::post('jobseeker/delete_training',[JobSeekerProfileController::class,'delete_training']);
 
+       Route::post('jobseeker/add_certification',[JobSeekerProfileController::class,'add_certification']);
+       Route::get('jobseeker/get_certification',[JobSeekerProfileController::class,'get_certification']);
+       Route::post('jobseeker/update_certification',[JobSeekerProfileController::class,'update_certification']);
+       Route::post('jobseeker/delete_certification',[JobSeekerProfileController::class,'delete_certification']);
+
+       Route::post('jobseeker/add_education',[JobSeekerProfileController::class,'add_education']);
+       Route::get('jobseeker/get_education',[JobSeekerProfileController::class,'get_education']);
+       Route::post('jobseeker/update_education',[JobSeekerProfileController::class,'update_education']);
+       Route::post('jobseeker/delete_education',[JobSeekerProfileController::class,'delete_education']);
+
     });
 
   

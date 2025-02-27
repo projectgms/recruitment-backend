@@ -451,12 +451,21 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingExperiences)) {
                 $existingExperiences = []; // Initialize as empty array if it's not a valid array
             }
-            // Merge new experiences with the existing ones to avoid duplicates
-            $userExp->experience = array_merge($existingExperiences, $experiences);
 
-            // Update the educations column with new data
-            // $userExp->experience = $experiences;
+            $maxExperienceId = max(array_column($existingExperiences, 'exp_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($experiences as &$newExperience) {
+                $maxExperienceId++;
+                $newExperience['exp_id'] = $maxExperienceId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userExp->experience = json_encode(array_merge($existingExperiences, $experiences), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
             $userExp->save();
+          
         } else {
             // If no existing record, create a new one
             $userExp = JobSeekerProfessionalDetails::create([
@@ -668,12 +677,22 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingInternships)) {
                 $existingInternships = []; // Initialize as empty array if it's not a valid array
             }
-            // Merge new experiences with the existing ones to avoid duplicates
-            $userInternship->internship = array_merge($existingInternships, $internships);
 
-            // Update the educations column with new data
-            // $userExp->experience = $experiences;
+            $maxInternshipId = max(array_column($existingInternships, 'internship_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($internships as &$newInternship) {
+                $maxInternshipId++;
+                $newInternship['internship_id'] = $maxInternshipId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userInternship->internship = json_encode(array_merge($existingInternships, $internships), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
             $userInternship->save();
+            // Merge new experiences with the existing ones to avoid duplicates
+         
         } else {
             // If no existing record, create a new one
             $userInternship = JobSeekerProfessionalDetails::create([
@@ -879,12 +898,21 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingProject)) {
                 $existingProject = []; // Initialize as empty array if it's not a valid array
             }
-            // Merge new experiences with the existing ones to avoid duplicates
-            $userProject->projects = array_merge($existingProject, $projects);
 
-            // Update the educations column with new data
-            // $userExp->experience = $experiences;
+            $maxProjectId = max(array_column($existingProject, 'project_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($projects as &$newProject) {
+                $maxProjectId++;
+                $newProject['project_id'] = $maxProjectId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userProject->projects = json_encode(array_merge($existingProject, $projects), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
             $userProject->save();
+          
         } else {
             // If no existing record, create a new one
             $userProject = JobSeekerProfessionalDetails::create([
@@ -1090,12 +1118,22 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingPublication)) {
                 $existingPublication = []; // Initialize as empty array if it's not a valid array
             }
-            // Merge new experiences with the existing ones to avoid duplicates
-            $userPublication->publications = array_merge($existingPublication, $publications);
 
-            // Update the educations column with new data
-            // $userExp->experience = $experiences;
+            $maxPublicationId = max(array_column($existingPublication, 'publication_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($publications as &$newPublication) {
+                $maxPublicationId++;
+                $newPublication['publication_id'] = $maxPublicationId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userPublication->publications = json_encode(array_merge($existingPublication, $publications), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
             $userPublication->save();
+            // Merge new experiences with the existing ones to avoid duplicates
+          
         } else {
             // If no existing record, create a new one
             $userPublication = JobSeekerEducationDetails::create([
@@ -1299,12 +1337,22 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingTrainig)) {
                 $existingTrainig = []; // Initialize as empty array if it's not a valid array
             }
-            // Merge new experiences with the existing ones to avoid duplicates
-            $userTraining->trainings = array_merge($existingTrainig, $trainings);
 
-            // Update the educations column with new data
-            // $userExp->experience = $experiences;
+            $maxTrainingId = max(array_column($existingTrainig, 'training_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($trainings as &$newTraining) {
+                $maxTrainingId++;
+                $newTraining['training_id'] = $maxTrainingId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userTraining->trainings = json_encode(array_merge($existingTrainig, $trainings), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
             $userTraining->save();
+            // Merge new experiences with the existing ones to avoid duplicates
+         
         } else {
             // If no existing record, create a new one
             $userPublication = JobSeekerEducationDetails::create([
@@ -1454,6 +1502,226 @@ class JobSeekerProfileController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'Training deleted successfully!',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function add_certification(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        // Validate input
+        $validator = Validator::make($request->all(), [
+            'certifications' => 'required|array',
+
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+
+
+        $certifications = [];
+
+        // Handle file uploads
+        $i = 1;
+        foreach ($request->certifications as $key => $certification) {
+
+            // Store JSON data with updated file path
+            $certifications[] = [
+                "certification_id" => $i,
+                "name" => $certification['name'] ? $certification['name'] : null,
+                "provider" => $certification['provider'] ? $certification['provider'] : null,
+                "enrollmentNumber"=>$certification['enrollmentNumber'] ? $certification['enrollmentNumber'] : null,
+                "validUpto" => $certification['validUpto'] ? $certification['validUpto'] : null,
+                "marksType" => $certification['marksType'] ? $certification['marksType'] : null,
+                "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : null,
+                "max" => $certification['max'] ? $certification['max'] : null,
+                "description" => $certification['description'] ? $certification['description'] : null
+            ];
+            $i++;
+        }
+
+        $userCertification = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
+
+        if ($userCertification) {
+            $existingCertification = json_decode($userCertification->certifications, true);
+
+            // Check if the internship field is empty or not in array format
+            if (!is_array($existingCertification)) {
+                $existingCertification = []; // Initialize as empty array if it's not a valid array
+            }
+          
+            $maxCertificationId = max(array_column($existingCertification, 'certification_id')) ?? 0;
+
+            // Assign new certification_ids starting from the max + 1
+            foreach ($certifications as &$newCertification) {
+                $maxCertificationId++;
+                $newCertification['certification_id'] = $maxCertificationId;
+            }
+    
+            // Merge the existing certifications with the new ones
+            $userCertification->certifications = json_encode(array_merge($existingCertification, $certifications), JSON_PRETTY_PRINT);
+         //   $userExp->experience = $experiences;
+            // Save the updated certifications back to the database
+            $userCertification->save();
+        } else {
+            // If no existing record, create a new one
+            $userCertification = JobSeekerEducationDetails::create([
+                'user_id' => $auth->id,
+                'bash_id' => Str::uuid(),
+                'certifications' => $certifications, // Store the array directly
+            ]);
+        }
+
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Certifications Added successfully!',
+
+        ], 200);
+    }
+
+    public function get_certification()
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $userCertification = JobSeekerEducationDetails::select('certifications')->where('user_id', $auth->id)->first();
+        return response()->json([
+            'status' => true,
+            'message' => 'Certification List',
+            'data' => json_decode($userCertification)
+        ], 200);
+    }
+
+    
+    public function update_certification(Request $request)
+    {
+        try {
+            $auth = JWTAuth::user();
+            if (!$auth) {
+                return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // Validate input
+            $validator = Validator::make($request->all(), [
+                'certification_id' => 'required|integer',
+                'certifications' => 'required|array', // Make sure experience data is passed in the request
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+            }
+
+            $certification_id = $request->certification_id;
+            $newCertificationData = $request->certifications; // The updated experience data
+
+            // Find the user document record
+            $userCertification = JobSeekerEducationDetails::select('certifications', 'user_id', 'id')->where('user_id', $auth->id)->first();
+            if (!$userCertification) {
+                return response()->json(['status' => false, 'message' => 'Training not found.'], 404);
+            }
+
+            // Decode the existing experience JSON data
+            $certifications = json_decode($userCertification->certifications, true);
+
+            // Ensure that experience is an array and not a string
+            if (!is_array($certifications)) {
+                return response()->json(['status' => false, 'message' => 'Certification field is not an array.'], 422);
+            }
+
+            // Find the specific experience record by exp_id
+            $find_certification_id = collect($certifications)->firstWhere('certification_id', $certification_id);
+
+            if (!$find_certification_id) {
+                return response()->json(['status' => false, 'message' => 'Certification not found.'], 404);
+            }
+
+            // Find the index of the experience
+            $index = collect($certifications)->search(function ($certification) use ($certification_id) {
+                return $certification['certification_id'] === $certification_id;
+            });
+
+            // Merge the new data with the existing experience data
+            $certifications[$index] = array_merge($certifications[$index], $newCertificationData);
+
+
+            // Save the updated experiences back to the database
+            $userCertification->certifications = json_encode($certifications, JSON_PRETTY_PRINT);
+            $userCertification->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Certification updated successfully!',
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function delete_certification(Request $request)
+    {
+        try {
+            $auth = JWTAuth::user();
+            if (!$auth) {
+                return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            // Validate input
+            $validator = Validator::make($request->all(), [
+                'certification_id' => 'required',
+
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+            }
+            $certification_id = $request->certification_id;
+
+            // Find the user document record
+            $userCertification = JobSeekerEducationDetails::select('certifications', 'user_id', 'id')->where('user_id', $auth->id)->first();
+
+            if (!$userCertification) {
+                return response()->json(['status' => false, 'message' => 'Certification not found.'], 404);
+            }
+
+            $certifications = json_decode($userCertification->certification, true);
+
+            // Ensure that documents is an array and not a string
+            if (!is_array($certifications)) {
+                return response()->json(['status' => false, 'message' => 'certification field is not an array.'], 422);
+            }
+
+            $certificationToDelete = collect($certifications)->firstWhere('certification_id', $certification_id);
+
+
+            if (!$certificationToDelete) {
+                return response()->json(['status' => false, 'message' => 'Certification ID not found.'], 404);
+            }
+
+
+            // Remove the document from the documents array
+            $updatedCertification = collect($certifications)->reject(function ($item) use ($certification_id) {
+                return $item['certification_id'] == $certification_id;
+            })->values()->all();
+
+
+            // Re-encode the documents array to JSON and save it back to the database
+            $userCertification->certifications = json_encode($updatedCertification);
+            $userCertification->save();
+
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Certification deleted successfully!',
             ], 200);
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
