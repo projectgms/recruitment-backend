@@ -9,6 +9,7 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -29,10 +30,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @return array
      */
-    public function getJWTCustomClaims()
-    {
-        return [];
-    }
+ 
     protected $fillable = [
         
         'first_name',
@@ -62,6 +60,7 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
+        'recruiter'
     ];
 
     /**
@@ -72,7 +71,22 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+    
+    public function recruiter(): HasOne
+    {
+        return $this->hasOne(Recruiter::class, 'user_id');
+    }
 
+    public function getCompanyIdAttribute()
+    {
+        return $this->recruiter ? $this->recruiter->company_id : null;
+    }
+    public function getJWTCustomClaims()
+    {
+        return [
+            'company_id' => $this->company_id
+        ];
+    }
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *

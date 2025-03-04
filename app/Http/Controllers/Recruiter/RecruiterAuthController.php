@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Company;
-
+use App\Models\Recruiter;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 
@@ -43,7 +43,8 @@ class RecruiterAuthController extends Controller
         }
 
         // Find the user by email and role
-        $user = User::where('email', $request->email)->where('role', 'recruiter')->first();
+        $user = User::select('users.*','recruiters.company_id')
+        ->join('recruiters','recruiters.user_id','=','users.id')->where('users.email', $request->email)->first();
         
         // Check if the user exists and the password is correct
         if ($user && Hash::check($request->password, $user->password)) {
@@ -129,7 +130,7 @@ class RecruiterAuthController extends Controller
                 'message'=>'User mobile already Signup.',
             ]);
         }else{
-           
+            
            $oemuser = new User();
            $oemuser->name=$request->name;
            $oemuser->bash_id=Str::uuid();
@@ -140,14 +141,21 @@ class RecruiterAuthController extends Controller
             $oemuser->role='recruiter';
             $oemuser->password=bcrypt($request->password);
             $oemuser->mobile=$request->mobile;
+          
             $oemuser->save();
             
-         
             $company = new Company();
             $company->bash_id=Str::uuid();
             $company->user_id = $oemuser->id; // Assign the new user ID
             $company->name = $request->company; // Assign the company name
             $company->save(); // Save the company record
+
+            $recuiter = new Recruiter();
+            $recuiter->bash_id=Str::uuid();
+            $recuiter->user_id = $oemuser->id; // Assign the new user ID
+            $recuiter->company_id = $company->id; // Assign the company name
+            $recuiter->role = 'recruiter'; // Assign the company name
+            $recuiter->save(); // Save the company record
 
 
             return response()->json([
@@ -156,5 +164,27 @@ class RecruiterAuthController extends Controller
                 
             ], 200);
         }
+    }
+
+    public function profile()
+    {
+
+
+        $user = JWTAuth::user();
+
+        // Check if user is null (if token is invalid or expired)
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+
+        // Return the authenticated user data
+        return response()->json([
+            'status' => true,
+            'message' => 'Profile fetched successfully.',
+            'data' => $user,
+        ], 200);
     }
 }

@@ -24,6 +24,7 @@ class JobSeekerProfileController extends Controller
     public function personal_info(Request $request)
     {
         $auth = JWTAuth::user();
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
         if (!$auth) {
             return response()->json([
@@ -90,14 +91,40 @@ class JobSeekerProfileController extends Controller
             return response()->json(['status' => false, 'message' => 'User not found'], 404);
         }
         if ($request->hasFile('profilePicture')) {
+            if ($personal->profile_picture) {
+                // Get the file path to delete
+                $existingFilePath = $personal->profile_picture;
+                
+                // Determine which disk to use and delete the file accordingly
+                if ($disk == 'local') {
+                    // Delete from local disk
+                    Storage::disk('public')->delete($existingFilePath);
+                } elseif ($disk == 's3') {
+                    // Delete from S3 disk
+                    Storage::disk('s3')->delete($existingFilePath);
+                }
+            }
+        
             $extension = $request->file('profilePicture')->getClientOriginalExtension();
 
-            // Create a unique filename using time and original extension
+            // Create a unique filename using time and the original extension
             $filename = time() . '.' . $extension;
+    
+            // Check which disk is selected and store the file accordingly
+            if ($disk == 'local') {
+              
+                // Store the file on the local disk under the 'jobseeker_profile_picture' folder
+                $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 'public');
+            } elseif ($disk == 's3') {
+           
+                // Store the file on the S3 disk under the 'jobseeker_profile_picture' folder
+               $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 's3');
+            }
+    
+            // Save the file path to the profile_picture column in the model
+            $personal->profile_picture = $imagePath;
+    
 
-            // Store the file and get the path
-            $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 'public'); // Store in 'storage/app/public/ticket_images'
-            $personal->profile_picture = $imagePath; // Make sure you have this column in your Ticket model
         }
 
         $personal->first_name = $request->firstName;
@@ -167,6 +194,8 @@ class JobSeekerProfileController extends Controller
             ->where('users.id', $auth->id)
 
             ->first();
+
+          
         return response()->json([
             'status' => true,
             'message' => 'Get Personal Information.',
@@ -1583,7 +1612,8 @@ class JobSeekerProfileController extends Controller
                 "marksType" => $certification['marksType'] ? $certification['marksType'] : null,
                 "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : null,
                 "max" => $certification['max'] ? $certification['max'] : null,
-                "description" => $certification['description'] ? $certification['description'] : null
+                "max" => $certification['max'] ? $certification['max'] : null,
+                "skills" => $certification['skills'] ? $certification['skills'] : null
             ];
             $i++;
         }
@@ -2080,6 +2110,81 @@ class JobSeekerProfileController extends Controller
             'status' => true,
             'message' => 'Get Other Information.',
             'data' => $contact_data
+        ]);
+    }
+
+    public function generate_resume_json()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $personal_data = User::select('users.*', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company',
+        'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
+        'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
+        'jobseeker_professional_details.experience','jobseeker_professional_details.summary','jobseeker_professional_details.skills','jobseeker_professional_details.achievement','jobseeker_professional_details.extra_curricular','jobseeker_professional_details.projects','jobseeker_professional_details.internship')
+        ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->join('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
+        ->join('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
+        ->where('users.id', $auth->id)
+
+        ->first();
+        $knownLanguages = json_decode($personal_data->language_known, true);
+
+        $responseData = [
+            'personalInformation' => [
+                'profilePicture' => $personal_data->profile_picture, // Assuming this field exists
+                'firstName' => $personal_data->first_name,
+                'middleName' => $personal_data->middle_name,
+                'lastName' => $personal_data->last_name,
+                'email' => $personal_data->email,
+                'phoneNumber' => $personal_data->mobile,
+                'dateOfBirth' => $personal_data->dob,
+                'gender' => $personal_data->gender,
+                'maritalStatus' => $personal_data->marital_status,
+                'addressLine1' => $personal_data->location,
+                'addressLine2' => '',
+                'city' => $personal_data->city,
+                'state' => $personal_data->state,
+                'country' => $personal_data->country,
+                 'zipCode' => $personal_data->zipcode,
+                 'course' => $personal_data->course,
+                'specialization' => $personal_data->primary_specialization,
+                'bloodGroup' => $personal_data->blood_group,
+                'medicalHistory' => $personal_data->medical_history,
+               'disability' => $personal_data->disability,
+                'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
+                 'totalExpYear' => $personal_data->total_year_exp,
+                 'totalExpMonth' => $personal_data->total_month_exp,
+            ],
+             'certificationDetails' => json_decode($personal_data->certifications),
+             'contactDetails' =>[
+                'secondaryPhone'=>$personal_data->secondary_mobile,
+                'otherEmail'=>$personal_data->secondary_email,
+                'linkedInUrl'=>$personal_data->linkedin_url,
+                'githubUrl'=>$personal_data->github_url
+             ],
+             'professionalDetails' => json_decode($personal_data->experience),
+             'projectDetails' => json_decode($personal_data->projects),
+            'researchPapers' => json_decode($personal_data->publications),
+             'trainingDetails' => json_decode($personal_data->trainings),
+             'otherDetails' => ['summary'=>$personal_data->summary,
+             'expertise'=>json_decode($personal_data->skills),
+             'achievements'=>$personal_data->achievement,
+             'extraCurricular'=>$personal_data->extra_curricular
+             ],
+             'educationDetails' => json_decode($personal_data->educations),
+             'internshipDetails' => json_decode($personal_data->internship),
+        ];
+        return response()->json([
+            'status' => true,
+            'message' => 'Get Other Information.',
+            'data' => $responseData
         ]);
     }
 

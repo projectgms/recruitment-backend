@@ -15,15 +15,22 @@ return new class extends Migration
         {
             Schema::create('jobs', function (Blueprint $table) {
                 $table->id();
+                $table->string('bash_id')->unique();
                 $table->integer('user_id');
                 $table->integer('comapny_id');
                 $table->string('job_title');
                 $table->text('job_description');
                 $table->string('job_type');
-                $table->string('location');
+                $table->json('location');
+                $table->json('industry');
+                $table->string('is_hot_job');
+                $table->string('contact_email');
                 $table->string('salary_range');
-                $table->text('skills_required');
+                $table->json('skills_required');
                 $table->string('experience_required');
+                $table->date('expiration_date');
+                $table->time('expiration_time');
+                $table->text('responsibilities');
                 $table->string('status');
                 $table->integer('active');
                 $table->timestamps();
