@@ -147,6 +147,57 @@ class JobPostController extends Controller
 
     public function update_job_post(Request $request)
     {
-        echo 'dffdfdfhii';
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'id'=>'required',
+            'job_title' => 'required',
+            'location' => 'array|required',
+            'industry' => 'array|required',
+            'contact_email' => 'required',
+            'job_description' => 'required',
+            'skills_required' => 'array|required',
+            'status' => 'required',
+            'salary_range' => 'required',
+            'is_hot_job' => 'required',
+            'expiration_date' => 'required',
+            'expiration_time' => 'required',
+            'job_type' => 'required',
+            'experience_required' => 'required',
+            'responsibilities' => 'required'
+
+        ], [
+            'id.required' => 'Id is required.',
+            'job_title.required' => 'Job Title is required.',
+            'location.required' => 'Location is required.',
+            'industry.required' => 'Industry is required.',
+            'contact_email.required' => 'Email is required.',
+            'job_description.required' => 'Job Description is required.',
+            'skills_required.required' => 'Skill is required.',
+            'status.required' => 'Status is required.',
+            'salary_range' => 'Salary is required.',
+            'expiration_date' => 'Expiration Date is required.',
+            'expiration_time' => 'Expiration Time is required.',
+            'job_type' => 'Job Type is required.',
+            'experience_required' => 'experience is required.',
+            'responsibilities' => 'Responsibilities is required.'
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
     }
 }
