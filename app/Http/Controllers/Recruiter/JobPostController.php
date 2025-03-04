@@ -147,6 +147,6 @@ class JobPostController extends Controller
 
     public function update_job_post(Request $request)
     {
-        
+        echo 'hii';
     }
 }
