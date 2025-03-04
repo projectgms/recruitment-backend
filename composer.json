@@ -6,12 +6,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "aws/aws-sdk-php": "^3.316",
+        "aws/aws-sdk-php": "^3.337",
         "guzzlehttp/guzzle": "^7.8",
         "laravel/framework": "^11.0",
         "laravel/sanctum": "*",
         "laravel/socialite": "^5.17",
         "laravel/tinker": "^2.9",
+        "league/flysystem-aws-s3-v3": "^3.29",
         "php-open-source-saver/jwt-auth": "^2.2"
     },
     "require-dev": {
