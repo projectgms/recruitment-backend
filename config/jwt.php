@@ -89,8 +89,8 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60),
-
+    //'ttl' => env('JWT_TTL', 60),
+    'ttl' => 10080,
     /*
     |--------------------------------------------------------------------------
     | Refresh time to live
@@ -138,7 +138,7 @@ return [
     'required_claims' => [
         'iss',
         'iat',
-        'exp',
+//'exp',
         'nbf',
         'sub',
         'jti',
@@ -208,7 +208,8 @@ return [
     |
     */
 
-    'blacklist_enabled' => env('JWT_BLACKLIST_ENABLED', true),
+   // 'blacklist_enabled' => env('JWT_BLACKLIST_ENABLED', true),
+      'blacklist_enabled' => true,
 
     /*
     | -------------------------------------------------------------------------
