@@ -13,8 +13,10 @@ use Illuminate\Http\Request;
 class RecruiterCompanyController extends Controller
 {
     //
-    public function company_profile()
+    public function company_profile(Request $request)
     {
+        $permissions = json_encode($request->attributes->get('permissions'));  // Correct way to access permissions
+
         $auth = JWTAuth::user();
 
         if (!$auth) {
@@ -23,7 +25,20 @@ class RecruiterCompanyController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
-        $company=Company::select('id','bash_id','name','website','industry','company_size','company_description','locations','company_logo','social_profiles')->where('user_id',$auth->id)->first();
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required',
+            ], [
+            'user_id.required' => 'User Id is required.',
+           
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' =>$validator->errors(),
+                
+            ], 422);
+        }
+        $company=Company::select('id','bash_id','name','website','industry','company_size','company_description','locations','company_logo','social_profiles')->where('user_id',$request->user_id)->first();
         return response()->json([
             'status' => true,
             'message' => 'Get Company Information.',
@@ -44,6 +59,8 @@ class RecruiterCompanyController extends Controller
             );
         }
         $validator = Validator::make($request->all(), [
+            
+            'user_id' => 'required',
             'name' => 'required',
             'website' => 'required',
             'industry'=>'array|required',
@@ -54,6 +71,8 @@ class RecruiterCompanyController extends Controller
             'social_profiles'=>'',
            
         ], [
+            'user_id.required' => 'User Id is required.',
+           
             'name.required' => 'Company Name is required.',
             'website.required' => 'Website is required.',
             'industry.required'=>'Industry is required.',
@@ -72,7 +91,7 @@ class RecruiterCompanyController extends Controller
         }
         $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-        $company = Company::where('user_id', $auth->id)->where('active', '1')->first();
+        $company = Company::where('user_id', $request->user_id)->where('active', '1')->first();
         if ($company) 
         {
             if ($request->hasFile("company_logo")) {

@@ -22,7 +22,7 @@ class AuthController extends Controller
     public function welcome()
     {
         $uuid = Str::uuid();
-        return response()->json(["status"=>true,
+        return response()->json(["status"=>$uuid,
                                 "message"=>"Welcome to Recruitment APP"]);
     }
     

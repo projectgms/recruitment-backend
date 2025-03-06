@@ -17,8 +17,8 @@ return new class extends Migration
                 $table->id();
                 $table->integer('job_id');
                 $table->integer('job_seeker_id');
-                $table->text('resume');
-                $table->text('cover_letter');
+                $table->text('resume')->nullable();
+                $table->text('cover_letter')->nullable();
                 $table->string('status');
                 $table->timestamps();
             });

@@ -24,6 +24,7 @@ use App\Http\Controllers\Recruiter\RecruiterCompanyController;
         Route::post('recruiter/add_job_post',[JobPostController::class,'add_job_post']);
         Route::get('recruiter/view_job_post',[JobPostController::class,'view_job_post']);
         Route::post('recruiter/update_job_post',[JobPostController::class,'update_job_post']);
+        Route::post('recruiter/delete_job_post',[JobPostController::class,'delete_job_post']);
 
     });
 
