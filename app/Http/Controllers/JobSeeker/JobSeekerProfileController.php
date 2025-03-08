@@ -2113,7 +2113,7 @@ class JobSeekerProfileController extends Controller
         ]);
     }
 
-    public function generate_resume_json()
+    public function master_resume_json()
     {
         $auth = JWTAuth::user();
 
@@ -2186,6 +2186,11 @@ class JobSeekerProfileController extends Controller
             'message' => 'Get Other Information.',
             'data' => $responseData
         ]);
+    }
+
+    public function generate_resume(Request $request)
+    {
+        echo 'hii';
     }
 
 }

@@ -52,7 +52,9 @@ class RecruiterAuthController extends Controller
 
             // Check if the user is active
             if ($user->active == "1") {
-
+                $check_role=RecruiterRole::select('id','role')->where('id',$user->role_id)->where('role',$user->role)->first();
+                if($check_role)
+                {
 
                 $user->oauth_provider = $request->oauth_provider;
                 $user->last_login = Carbon::now();
@@ -79,6 +81,13 @@ class RecruiterAuthController extends Controller
                         "permissions" => $permissions,
                     ], 200);
                 }
+            }else{
+                return response()->json([
+                    "status" => false,
+                    "message" => "Invalid LOgin.",
+                    "data" => []
+                ]);  // HTTP 403 Forbidden
+            }
             } else {
                 // If the user is not active, return an error
                 return response()->json([

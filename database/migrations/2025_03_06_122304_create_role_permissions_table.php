@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('bash_id')->unique();
             $table->integer('role_id');
-            $table->integer('company_id');
+            $table->integer('company_id')->nullable();
             $table->string('menu');
             $table->integer('view');
             $table->integer('add');

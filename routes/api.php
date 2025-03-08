@@ -9,6 +9,8 @@ use App\Http\Controllers\Recruiter\JobPostController;
 use App\Http\Controllers\Recruiter\RecruiterAuthController;
 use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Http\Controllers\Recruiter\RecruiterCompanyController;
+
+//Admin
 use App\Http\Controllers\Admin\AdminAuthController;
 
 Route::get('/login', function () {
@@ -25,8 +27,11 @@ Route::prefix('v1')->group(function () {
     require base_path('routes/api/jobseeker.php');
 
 
-    Route::post('admin/login', [AdminAuthController::class, 'login']);
-    Route::post('recruiter/login', [RecruiterAuthController::class, 'login']);
+   Route::post('admin/login', [AdminAuthController::class, 'login']);
+   Route::post('admin/forgot_password',[AdminAuthController::class,'forgot_password']);
+   Route::post('admin/reset_password',[AdminAuthController::class,'reset_password']);
+
+   Route::post('recruiter/login', [RecruiterAuthController::class, 'login']);
    Route::post('recruiter/register',[RecruiterAuthController::class,'register']);
    Route::post('recruiter/forgot_password',[RecruiterController::class,'forgot_password']);
    Route::post('recruiter/reset_password',[RecruiterController::class,'reset_password']);
@@ -40,6 +45,10 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/update_job_post',[JobPostController::class,'update_job_post']);
         Route::post('recruiter/delete_job_post',[JobPostController::class,'delete_job_post']);
 
+
+
+        //Admin Routes
+        Route::get('admin/profile', [AdminAuthController::class, 'profile']);
     });
 });
 

@@ -38,7 +38,7 @@ return new class extends Migration
             $table->integer('active');
             $table->string('status');
             $table->dateTime('last_login');
-            $table->string('ip_address');
+            $table->string('ip_address')->nullable();
             $table->timestamps();
         });
     }
