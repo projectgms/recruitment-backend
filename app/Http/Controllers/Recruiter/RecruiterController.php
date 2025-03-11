@@ -39,13 +39,13 @@ class RecruiterController extends Controller
             $token = Password::getRepository()->create($user_s);
           
             // Send the custom notification
-            $user_s->notify(new ResetPasswordNotification($token));
+           // $user_s->notify(new ResetPasswordNotification($token));
            
             $data=array(
                 'reset_pass_token'=>$token,
                 'email'=>$request->email
                 );
-            return response()->json(['status' => true, 'message' => 'Password reset link sent.','data'=>$data], 200);
+            return response()->json(['status' => true, 'message' => 'Password reset link sent.',$data], 200);
             }else{
                 return response()->json([
                     "status" => false,
@@ -81,7 +81,7 @@ class RecruiterController extends Controller
            ], 422);
        }
          // Find the user by email
-         $user = User::select('id','password')->where('email', $request->email)->first();
+         $user = User::select('id','password','role','role_id')->where('email', $request->email)->first();
 
          // Check if the user exists
          if ($user) {

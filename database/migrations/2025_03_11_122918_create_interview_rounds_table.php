@@ -11,14 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        
-        Schema::create('recruiter_roles', function (Blueprint $table) {
+        Schema::create('interview_rounds', function (Blueprint $table) {
             $table->id();
             $table->string('bash_id')->unique();
-            $table->string('role');
-            $table->integer('parent_id');
-            $table->integer('active');
-            $table->integer('added_by')->nullable();
+            $table->string('round_name');
+            $table->integer('active')->default(1);
             $table->timestamps();
         });
     }
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('recruiter_roles');
+        Schema::dropIfExists('interview_rounds');
     }
 };

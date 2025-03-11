@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Company;
+use App\Models\InterviewRound;
 use App\Models\Jobs;
 use Illuminate\Support\Str;
 
@@ -29,6 +30,8 @@ class JobPostController extends Controller
             );
         }
         $validator = Validator::make($request->all(), [
+            'company_id'=>'required',
+            'user_id'=>'required',
             'job_title' => 'required',
             'location' => 'array|required',
             'industry' => 'array|required',
@@ -45,6 +48,8 @@ class JobPostController extends Controller
             'responsibilities' => 'required'
 
         ], [
+            'company_id.required' => 'Company Id is required.',
+            'user_id.required' => 'User Id is required.',
             'job_title.required' => 'Job Title is required.',
             'location.required' => 'Location is required.',
             'industry.required' => 'Industry is required.',
@@ -67,13 +72,13 @@ class JobPostController extends Controller
 
             ], 422);
         }
-        $check_job = Jobs::select('id')->where('company_id', $auth->company_id)->where('job_title', $request->job_title)->where('experience_required', $request->experience_required)->where('status', $request->status)->count();
+        $check_job = Jobs::select('id')->where('company_id', $request->company_id)->where('job_title', $request->job_title)->where('experience_required', $request->experience_required)->where('status', $request->status)->count();
         if ($check_job == 0) {
 
             $jobs = new Jobs();
             $jobs->bash_id = Str::uuid();
-            $jobs->company_id = $auth->company_id;
-            $jobs->user_id = $auth->id;
+            $jobs->company_id = $request->company_id;
+            $jobs->user_id = $request->user_id;
             $jobs->job_title = $request->job_title;
 
             $jobs->job_description = $request->job_description;
@@ -99,7 +104,7 @@ class JobPostController extends Controller
         }
     }
 
-    public function view_job_post()
+    public function view_job_post(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -113,8 +118,24 @@ class JobPostController extends Controller
             );
         }
 
+        $validator = Validator::make($request->all(), [
+            'company_id'=>'required',
+          
+
+        ], [
+            'company_id.required' => 'Company Id is required.',
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
         $job_post=Jobs::select('jobs.id','jobs.bash_id','jobs.job_title','jobs.job_description','jobs.job_type','jobs.location','jobs.contact_email','jobs.salary_range','jobs.skills_required','jobs.industry','jobs.experience_required','jobs.status','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time','jobs.responsibilities','jobs.created_at','companies.name','jobs.company_id')
-        ->join('companies','companies.id','=','jobs.company_id')->where('jobs.company_id',$auth->company_id)->get()
+        ->join('companies','companies.id','=','jobs.company_id')->where('jobs.company_id',$request->company_id)->get()
         ->map(function ($job) {
             return [
                 'id' => $job->id,
@@ -160,6 +181,8 @@ class JobPostController extends Controller
         }
         $validator = Validator::make($request->all(), [
             'id'=>'required',
+            'company_id'=>'required',
+            'user_id'=>'required',
             'job_title' => 'required',
             'location' => 'array|required',
             'industry' => 'array|required',
@@ -177,6 +200,8 @@ class JobPostController extends Controller
 
         ], [
             'id.required' => 'Id is required.',
+            'company_id'=>'required',
+            'user_id'=>'required',
             'job_title.required' => 'Job Title is required.',
             'location.required' => 'Location is required.',
             'industry.required' => 'Industry is required.',
@@ -200,13 +225,13 @@ class JobPostController extends Controller
             ], 422);
         }
 
-        $check_job = Jobs::select('id')->where('company_id', $auth->company_id)->where('job_title', $request->job_title)->where('experience_required', $request->experience_required)->where('status', $request->status)->count();
+        $check_job = Jobs::select('id')->where('company_id', $request->company_id)->where('job_title', $request->job_title)->where('experience_required', $request->experience_required)->where('status', $request->status)->count();
         if ($check_job <=1) {
 
             $jobs =Jobs::find($request->id);
             $jobs->bash_id = Str::uuid();
-            $jobs->company_id = $auth->company_id;
-            $jobs->user_id = $auth->id;
+            $jobs->company_id = $request->company_id;
+            $jobs->user_id = $request->id;
             $jobs->job_title = $request->job_title;
 
             $jobs->job_description = $request->job_description;
@@ -264,5 +289,19 @@ class JobPostController extends Controller
 
         return response()->json(['status' => true, 'message' => 'Job post deleted successfully'], 200);
 
+    }
+
+    public function get_interview_round()
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $interview_rounds=InterviewRound::select('id as interview_round_id','round_name')->get();
+        return response()->json([
+            'status' => true,
+            'message' => 'Get Interview Rounds.',
+            'data' => $interview_rounds
+        ]);
     }
 }

@@ -139,6 +139,7 @@ class JobSeekerAuthController extends Controller
 
             $oemuser->email = $request->email;
             $oemuser->role = 'job_seeker';
+            $oemuser->role_id = '1';
             $oemuser->password = bcrypt($request->password);
 
             $oemuser->save();

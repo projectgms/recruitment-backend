@@ -39,6 +39,21 @@ class RecruiterCompanyController extends Controller
             ], 422);
         }
         $company=Company::select('id','bash_id','name','website','industry','company_size','company_description','locations','company_logo','social_profiles')->where('user_id',$request->user_id)->first();
+        if ($company) {
+            // Modify the company logo to include the full URL if it exists
+            if ($company->company_logo) {
+                $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
+            } else {
+                // If no logo exists, set it to null or a default image URL
+                $company->company_logo = null; // Replace with a default image URL if needed
+            }
+        
+            return response()->json([
+                'status' => true,
+                'message' => 'Company fetched successfully.',
+                'data' => $company
+            ]);
+        }
         return response()->json([
             'status' => true,
             'message' => 'Get Company Information.',
@@ -128,6 +143,7 @@ class RecruiterCompanyController extends Controller
             $company->company_description = $request->company_description;
             $company->industry = $request->industry;
             $company->locations =$request->locations;
+            $company->social_profiles =$request->social_profiles;
             $company->save();
             return response()->json(['status' => true, 'message' => 'Company Information Updated.'], 200);
         }else{

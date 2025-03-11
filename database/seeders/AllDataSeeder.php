@@ -1,5 +1,6 @@
 <?php namespace Database\Seeders;
 
+use App\Models\InterviewRound;
 use Illuminate\Database\Seeder;
 use App\Models\SuperAdminRole;
 use App\Models\RecruiterRole;
@@ -13,6 +14,33 @@ class AllDataSeeder extends Seeder
 {
     public function run()
     {
+
+           // Create SuperAdmin Role
+         $rounds=[  [
+          
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'MCQ Test',
+           
+        ],
+        [
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'Technical Test',
+           
+        ],
+        [
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'Technical Interview',
+           
+        ],
+        [
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'HR Round',
+           
+        ],
+    ];
+    foreach ($rounds as $rnd) {
+        InterviewRound::firstOrCreate($rnd);
+    }
         // Create SuperAdmin Role
         $superAdminRole = SuperAdminRole::firstOrCreate([
             'role' => 'super_admin',

@@ -199,6 +199,38 @@ class RecruiterAuthController extends Controller
                     "add" => 1,
                     "edit" => 1,
                     "delete" => 1
+                ],
+                [
+                    "id" => 3,
+                    "menu" => "job management",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
+                ],
+                [
+                    "id" => 4,
+                    "menu" => "users",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
+                ],
+                [
+                    "id" => 5,
+                    "menu" => "candidate",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
+                ],
+                [
+                    "id" => 6,
+                    "menu" => "interview",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
                 ]
             ];
             foreach ($permission_data as $permission) {

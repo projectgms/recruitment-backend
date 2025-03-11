@@ -36,7 +36,7 @@ class JobSeekerController extends Controller
             $token = Password::getRepository()->create($user_s);
           
             // Send the custom notification
-            $user_s->notify(new ResetPasswordNotification($token));
+           // $user_s->notify(new ResetPasswordNotification($token));
            
             $data=array(
                 'reset_pass_token'=>$token,
@@ -78,7 +78,7 @@ class JobSeekerController extends Controller
             // throw ValidationException::withMessages(['email' => 'This email address or Unique Id does not exist.']);
             $user->password = bcrypt($request->password); // Your custom way of hashing or processing
             $user->save();
-            return response()->json(['status' => 'Password has been reset successfully.'], 200);
+            return response()->json(['status' =>true,'message'=> 'Password has been reset successfully.'], 200);
 
          }else{
             return response()->json(['status' => false, 'message' => 'This email address does not exist.']);

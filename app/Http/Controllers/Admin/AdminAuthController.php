@@ -10,12 +10,12 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\Models\SuperAdminRole;
 use App\Models\RolePermission;
 use Illuminate\Support\Facades\Password;
-use App\Notifications\Admin\ResetPasswordNotification;
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Notifications\Admin\ResetPasswordNotification;
 
 use Illuminate\Support\Facades\Validator;
 
