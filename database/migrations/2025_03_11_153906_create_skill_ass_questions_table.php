@@ -13,7 +13,9 @@ return new class extends Migration
     {
         Schema::create('skill_ass_questions', function (Blueprint $table) {
             $table->id();
+            
             $table->string('skill');
+            $table->string('skill_level');
             $table->text('question');
             $table->string('option1');
             $table->string('option2');

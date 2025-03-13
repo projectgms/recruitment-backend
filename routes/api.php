@@ -37,6 +37,7 @@ Route::prefix('v1')->group(function () {
     Route::post('recruiter/register', [RecruiterAuthController::class, 'register']);
     Route::post('recruiter/forgot_password', [RecruiterController::class, 'forgot_password']);
     Route::post('recruiter/reset_password', [RecruiterController::class, 'reset_password']);
+    Route::post('decrypt_email', [RecruiterController::class, 'decrypt_email']);
     Route::middleware(['auth:api', \App\Http\Middleware\AttachPermissionsMiddleware::class, \App\Http\Middleware\DynamicRoleMiddleware::class])->group(function () {
         Route::get('recruiter/profile', [RecruiterAuthController::class, 'profile']);
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);

@@ -52,7 +52,7 @@ class JobSeekerProfileController extends Controller
             'knownLanguages' => 'required|array', // Ensure it's an array
             'knownLanguages.*' => 'string',
             'medicalHistory' => 'required',
-            'dreamCompany' => 'required',
+          
             'totalExpYear' => 'required',
             'totalExpMonth' => 'required',
         ], [
@@ -74,7 +74,7 @@ class JobSeekerProfileController extends Controller
             'disability.required' => 'disability is required.',
             'knownLanguages.required' => 'knownLanguages is required.',
             'medicalHistory.required' => 'medicalHistory is required.',
-            'dreamCompany.required' => 'dreamCompany is required.',
+       
             'totalExpYear.required' => 'total year Exp is required',
             'totalExpMonth.required' => 'total month Exp is required',
         ]);
@@ -155,7 +155,7 @@ class JobSeekerProfileController extends Controller
             $contact->zipcode = $request->zipCode;
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
-            $contact->dream_company = $request->dreamCompany;
+           
             $contact->total_year_exp = $request->totalExpYear;
             $contact->total_month_exp = $request->totalExpMonth;
 
@@ -189,12 +189,22 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
 
-        $personal_data = User::select('users.*', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
+        $personal_data = User::select('users.*','job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
             ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
             ->where('users.id', $auth->id)
 
             ->first();
-
+            if ($personal_data) {
+                // Modify the company logo to include the full URL if it exists
+                if ($personal_data->profile_picture) {
+                    $personal_data->profile_picture = env('APP_URL') . Storage::url('app/public/' . $personal_data->profile_picture);
+                } else {
+                    // If no logo exists, set it to null or a default image URL
+                    $personal_data->profile_picture = null; // Replace with a default image URL if needed
+                }
+            
+              
+            }
           
         return response()->json([
             'status' => true,
@@ -1806,98 +1816,103 @@ class JobSeekerProfileController extends Controller
         }
     }
 
-    public function add_education(Request $request)
-    {
-        $auth = JWTAuth::user();
-        if (!$auth) {
-            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-        }
-
-        // Validate input
-        $validator = Validator::make($request->all(), [
-            'educations' => 'required|array',
-
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-        }
-
-
-        $educations = [];
-
-        // Handle file uploads
-        $i = 1;
-        foreach ($request->educations as $key => $education) {
-
-            // Store JSON data with updated file path
-            $educations[] = [
-                "type" => $education['type'], // Adding type (e.g. 10th, 12th)
-                "data" => [
-                    "education_id" => $i,
-                    "qualification" => $education['data']['qualification'] ?? null,
-                    "stream" => $education['data']['stream'] ?? null,
-                    "college" => $education['data']['college'] ?? null,
-                    "collegeCity" => $education['data']['collegeCity'] ?? null,
-                    "joiningYear" => $education['data']['joiningYear'] ?? null,
-                    "completionYear" => $education['data']['completionYear'] ?? null,
-                    "graduationType" => $education['data']['graduationType'] ?? null,
-                    "aggregateType" => $education['data']['aggregateType'] ?? null,
-                    "aggregate" => $education['data']['aggregate'] ?? null,
-                    "max" => $education['data']['max'] ?? null,
-                    "activeBacklogs" => $education['data']['activeBacklogs'] ?? null
-                ]
-            ];
-            $i++;
-        }
-
-        $userEducation = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
-       
-        if ($userEducation) {
-            $existingEducation = json_decode($userEducation->educations, true);
-
-            // Check if the internship field is empty or not in array format
-            if (!is_array($existingEducation)) {
-                $existingEducation = []; // Initialize as empty array if it's not a valid array
-            }
-           
-            if (!empty($existingEducation)) {
-                // Find the maximum education_id from the existing array
-                $maxEducationId = max(array_column($existingEducation, 'data.education_id'));
-            } else {
-                // If empty, set a default education_id
-                $maxEducationId = 0;
-            }
-            
-           
-            // Assign new certification_ids starting from the max + 1
-            foreach ($educations as &$newEducation) {
-                $maxEducationId++;
-                $newEducation['data']['education_id'] = $maxEducationId;
-            }
     
-            // Merge the existing certifications with the new ones
-            $userEducation->educations = json_encode(array_merge($existingEducation, $educations), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
-            // Save the updated certifications back to the database
-            $userEducation->save();
-        } else {
-            // If no existing record, create a new one
-            $userEducation = JobSeekerEducationDetails::create([
-                'user_id' => $auth->id,
-                'bash_id' => Str::uuid(),
-                'educations' => $educations, // Store the array directly
-            ]);
-        }
-
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Education Added successfully!',
-
-        ], 200);
+public function add_education(Request $request)
+{
+    $auth = JWTAuth::user();
+    if (!$auth) {
+        return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
     }
 
+    // Validate input
+    $validator = Validator::make($request->all(), [
+        'educations' => 'required', // Ensure educations field is present
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+    }
+
+    $educations = [];
+
+    // Check if input is an object instead of an array and convert it to an array
+   
+        $request->educations = [$request->educations];
+  
+    // Process new education entries
+    foreach ($request->educations as $education) {
+        // Ensure 'data' is present and is an array
+        if (!isset($education['data']) || !is_array($education['data'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid education data format. "data" must be an array.'
+            ], 422);
+        }
+
+        $educations[] = [
+            "type" => $education['type'] ?? 'Unknown', // Default value if 'type' is missing
+            "data" => [
+                "education_id" => null, // Will be updated dynamically
+                "qualification" => $education['data']['qualification'] ?? null,
+                "stream" => $education['data']['stream'] ?? null,
+                "college" => $education['data']['college'] ?? null,
+                "collegeCity" => $education['data']['collegeCity'] ?? null,
+                "joiningYear" => $education['data']['joiningYear'] ?? null,
+                "completionYear" => $education['data']['completionYear'] ?? null,
+                "graduationType" => $education['data']['graduationType'] ?? null,
+                "aggregateType" => $education['data']['aggregateType'] ?? null,
+                "aggregate" => $education['data']['aggregate'] ?? null,
+                "max" => $education['data']['max'] ?? null,
+                "activeBacklogs" => $education['data']['activeBacklogs'] ?? null
+            ]
+        ];
+    }
+
+    // Fetch the existing education record for the user
+    $userEducation = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
+
+    if ($userEducation) {
+        // Decode existing education data
+        $existingEducation = json_decode($userEducation->educations, true);
+
+        // Ensure existing education is an array
+        if (!is_array($existingEducation)) {
+            $existingEducation = [];
+        }
+
+        // Get the highest existing education_id
+        $educationIds = array_column(array_column($existingEducation, 'data'), 'education_id');
+        $maxEducationId = !empty($educationIds) ? max($educationIds) : 0;
+
+        // Assign new education_ids and append them
+        foreach ($educations as &$newEducation) {
+            $maxEducationId++;
+            $newEducation['data']['education_id'] = $maxEducationId;
+        }
+
+        // Merge the existing and new educations
+        $userEducation->educations = json_encode(array_merge($existingEducation, $educations), JSON_PRETTY_PRINT);
+        $userEducation->save();
+    } else {
+        // If no existing record, create a new one
+        foreach ($educations as $index => &$newEducation) {
+            $newEducation['data']['education_id'] = $index + 1;
+        }
+
+        $userEducation = JobSeekerEducationDetails::create([
+            'user_id' => $auth->id,
+            'bash_id' => Str::uuid(),
+            'educations' => json_encode($educations, JSON_PRETTY_PRINT),
+        ]);
+    }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Education added successfully!',
+    ], 200);
+}
+
+    
     public function get_education()
     {
         $auth = JWTAuth::user();

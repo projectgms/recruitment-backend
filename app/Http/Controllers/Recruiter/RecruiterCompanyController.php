@@ -48,11 +48,7 @@ class RecruiterCompanyController extends Controller
                 $company->company_logo = null; // Replace with a default image URL if needed
             }
         
-            return response()->json([
-                'status' => true,
-                'message' => 'Company fetched successfully.',
-                'data' => $company
-            ]);
+          
         }
         return response()->json([
             'status' => true,

@@ -27,6 +27,7 @@ return new class extends Migration
                 $table->string('contact_email');
                 $table->string('salary_range');
                 $table->json('skills_required');
+                $table->json('round')->nullable();
                 $table->string('experience_required');
                 $table->date('expiration_date');
                 $table->time('expiration_time');

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Crypt;
 
 use App\Models\RecruiterRole;
 
@@ -39,13 +40,13 @@ class RecruiterController extends Controller
             $token = Password::getRepository()->create($user_s);
           
             // Send the custom notification
-           // $user_s->notify(new ResetPasswordNotification($token));
+           $user_s->notify(new ResetPasswordNotification($token));
            
             $data=array(
                 'reset_pass_token'=>$token,
                 'email'=>$request->email
                 );
-            return response()->json(['status' => true, 'message' => 'Password reset link sent.',$data], 200);
+            return response()->json(['status' => true, 'message' => 'Password reset link sent.','data'=>$data], 200);
             }else{
                 return response()->json([
                     "status" => false,
@@ -104,5 +105,29 @@ class RecruiterController extends Controller
          }
       
  
+    }
+
+    public function decrypt_email(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            // 'token'=>'required',
+            'email' => 'required',   
+       ], [
+           'email.required' => 'Email is required.',
+
+       ]);
+       if ($validator->fails()) {
+           return response()->json([
+               'status' => false,
+               'message' =>  $validator->errors(),
+            
+           ], 422);
+       }
+     $originalEmail = decrypt($request->email);
+     return response()->json([
+        'status' => true,
+        'message' => 'Decrypted Email.',
+        'data' => $originalEmail
+    ]);
     }
 }

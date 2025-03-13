@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\JobSeeker;
 
 use App\Http\Controllers\Controller;
+use App\Models\JobApplication;
 use App\Models\JobSeekerProfessionalDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\jobs;
+use App\Models\JobSeekerContactDetails;
 use Illuminate\Support\Facades\Storage;
 
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
@@ -189,5 +191,167 @@ class JobController extends Controller
             'message' => 'Filtered jobs fetched successfully.',
             'data' => $jobs
         ]);
+    }
+
+    public function get_job_details(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required', 
+            'bash_id'=>'required',   
+        ], [
+            'id.required' => 'Job Id is required.',
+            'bash_id.required'=>'Bash Id is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+
+        $jobs = Jobs::select(
+            'jobs.id',
+            'jobs.bash_id',
+            'jobs.job_title',
+            'jobs.job_type',
+            'jobs.experience_required',
+            'jobs.salary_range',
+            'jobs.job_description',
+            'jobs.is_hot_job',
+            'jobs.location as job_locations',
+            'jobs.responsibilities',
+            'jobs.skills_required',
+            'jobs.industry',
+            'jobs.contact_email',
+            'companies.company_logo',
+            'companies.name as company_name',
+            'companies.locations as company_locations'
+        )
+            ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
+            ->where('jobs.status', 'Active')
+            ->where('jobs.id','=',$request->id)
+            ->where('jobs.bash_id','=',$request->bash_id)
+            ->first();
+            if ($jobs) {
+                // Modify the company logo to include the full URL if it exists
+                if ($jobs->company_logo) {
+                    $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
+                } else {
+                    // If no logo exists, set it to null or a default image URL
+                    $jobs->company_logo = null; // Replace with a default image URL if needed
+                }
+            
+              
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Job Details.',
+                'data' => $jobs
+            ]);
+    }
+
+    public function apply_job(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required', 
+            'bash_id'=>'required',   
+        ], [
+            'id.required' => 'Job Id is required.',
+            'bash_id.required'=>'Bash Id is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+        $get_skills = JobSeekerProfessionalDetails::select('skills')
+        ->where('user_id', $auth->id)
+        ->first();
+    
+    $get_exp = JobSeekerContactDetails::select('total_year_exp', 'total_month_exp')
+        ->where('user_id', $auth->id)
+        ->first();
+    
+    // Convert skills to an array (JSON or comma-separated)
+    $jobSeekerSkills = json_decode($get_skills->skills, true);
+    if (!is_array($jobSeekerSkills)) {
+        $jobSeekerSkills = array_map('trim', explode(',', $get_skills->skills));
+    }
+    
+    // Convert total experience to years
+    $candidateExperience = (int) $get_exp->total_year_exp + ($get_exp->total_month_exp / 12);
+    
+    // 2) Build the base query for jobs
+    $jobsQuery = Jobs::select(
+        'jobs.id',
+        'jobs.bash_id',
+        'jobs.experience_required',
+    )
+        ->where('jobs.status', 'Active')
+        ->where('jobs.id', $request->id);
+    
+    // 3) Add experience condition (extract number from "7 years")
+    $jobsQuery->whereRaw("CAST(REGEXP_SUBSTR(jobs.experience_required, '[0-9]+') AS UNSIGNED) <= ?", [$candidateExperience]);
+    
+    // 4) Add skill matching (case-insensitive)
+    $jobsQuery->where(function ($query) use ($jobSeekerSkills) {
+        foreach ($jobSeekerSkills as $skill) {
+            $lowerSkill = strtolower($skill);
+            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $lowerSkill . '%']);
+        }
+    });
+    
+    $matchingJobs = $jobsQuery->first();
+    if($matchingJobs)
+    {
+        $check_job=JobApplication::where('job_id','=',$request->id)->where('job_seeker_id','=',$auth->id)->first();
+        if($check_job)
+        {
+       
+        $apply=JobApplication::find($check_job->id);
+        $apply->bash_id=Str::uuid();
+        $apply->job_id=$request->id;
+        $apply->job_seeker_id=$auth->id;
+        $apply->status='Applied';
+        $apply->save();
+        return response()->json([
+            'status' => true,
+            'message' => 'You already applied this job..'
+        ]);
+        }else{
+      $apply=new JobApplication();
+      $apply->bash_id=Str::uuid();
+      $apply->job_id=$request->id;
+      $apply->job_seeker_id=$auth->id;
+      $apply->status='Applied';
+      $apply->save();
+      return response()->json([
+        'status' => true,
+        'message' => 'Job Applied.',
+      
+    ]);
+        }
+    }else{
+        return response()->json([
+            'status' => true,
+            'message' => 'Your Skill and Experience not match this job..',
+          
+        ]);
+    }
+
     }
 }

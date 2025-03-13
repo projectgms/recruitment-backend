@@ -36,7 +36,7 @@ class JobSeekerController extends Controller
             $token = Password::getRepository()->create($user_s);
           
             // Send the custom notification
-           // $user_s->notify(new ResetPasswordNotification($token));
+           $user_s->notify(new ResetPasswordNotification($token));
            
             $data=array(
                 'reset_pass_token'=>$token,

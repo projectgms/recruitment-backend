@@ -149,6 +149,7 @@ class JobPostController extends Controller
                 'skills_required' => json_decode($job->skills_required, true), // Decode JSON
                 'industry' => json_decode($job->industry, true), // Decode JSON
                 'experience_required' => $job->experience_required,
+                'round' => json_decode($job->round, true),
                 'status' => $job->status,
                 'is_hot_job' => $job->is_hot_job,
                 'expiration_date' => $job->expiration_date,

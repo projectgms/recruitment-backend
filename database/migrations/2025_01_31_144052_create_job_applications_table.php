@@ -15,6 +15,7 @@ return new class extends Migration
         {
             Schema::create('job_applications', function (Blueprint $table) {
                 $table->id();
+                $table->string('bash_id')->unique();
                 $table->integer('job_id');
                 $table->integer('job_seeker_id');
                 $table->text('resume')->nullable();
