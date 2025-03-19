@@ -230,9 +230,7 @@ class JobPostController extends Controller
         if ($check_job <=1) {
 
             $jobs =Jobs::find($request->id);
-            $jobs->bash_id = Str::uuid();
-            $jobs->company_id = $request->company_id;
-            $jobs->user_id = $request->id;
+          
             $jobs->job_title = $request->job_title;
 
             $jobs->job_description = $request->job_description;
@@ -244,7 +242,7 @@ class JobPostController extends Controller
             $jobs->skills_required = json_encode($request->skills_required);
 
             $jobs->industry = json_encode($request->industry);
-
+            $jobs->industry = json_encode($request->round);
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
             $jobs->is_hot_job = $request->is_hot_job;

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\JobSeeker;
 
 use App\Http\Controllers\Controller;
+use App\Models\GenerateResume;
 use App\Models\JobSeekerContactDetails;
 use App\Models\JobSeekerEducationDetails;
 use App\Models\JobSeekerProfessionalDetails;
@@ -303,7 +304,7 @@ class JobSeekerProfileController extends Controller
             $validator = Validator::make($request->all(), [
                 'documents' => 'required|array',
                 'documents.*.type' => 'required|string',
-                'documents.*.document' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:2048'
+                'documents.*.file' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf'
             ]);
 
             if ($validator->fails()) {
@@ -318,14 +319,14 @@ class JobSeekerProfileController extends Controller
             foreach ($request->documents as $key => $document) {
                 $filePath = null;
 
-                if ($request->hasFile("documents.$key.document")) {
-                    $oldFilePath = $document['document']; // Assuming the document field contains the current file path
+                if ($request->hasFile("documents.$key.file")) {
+                    $oldFilePath = $document['file']; // Assuming the document field contains the current file path
 
                     // Delete the old file if it exists and it's not null
                     if ($oldFilePath && Storage::exists('public/' . $oldFilePath)) {
                         Storage::delete('public/' . $oldFilePath);
                     }
-                    $file = $request->file("documents.$key.document");
+                    $file = $request->file("documents.$key.file");
                     $filename = time() . '_' . $file->getClientOriginalName();
                     $filePath = $file->storeAs('jobseeker_documents', $filename, 'public');
                 }
@@ -334,7 +335,7 @@ class JobSeekerProfileController extends Controller
                 $documents[] = [
                     'doc_id' => $i,
                     'type' => $document['type'],
-                    'document' => $filePath ? $filePath : null,
+                    'file' => $filePath ? $filePath : null,
                 ];
                 $i++;
             }
@@ -406,7 +407,7 @@ class JobSeekerProfileController extends Controller
             }
 
             // Delete the file from storage
-            $filePath = $documentToDelete['document']; // The path of the file in the 'document' field
+            $filePath = $documentToDelete['file']; // The path of the file in the 'document' field
             if (Storage::exists('public/' . $filePath)) {
                 // If the file exists, delete it
                 Storage::delete('public/' . $filePath);
@@ -527,7 +528,7 @@ class JobSeekerProfileController extends Controller
             $userExp = JobSeekerProfessionalDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'experience' => $experiences, // Store the array directly
+                'experience' => json_encode($experiences), // Store the array directly
             ]);
         }
 
@@ -1938,8 +1939,8 @@ public function add_education(Request $request)
 
             // Validate input
             $validator = Validator::make($request->all(), [
-                'education_id' => 'required|integer',
-                'educations' => 'required|array', // Make sure experience data is passed in the request
+                'education_id' => 'required',
+                'educations' => 'required', // Make sure experience data is passed in the request
             ]);
 
             if ($validator->fails()) {
@@ -1961,31 +1962,36 @@ public function add_education(Request $request)
             // Ensure that experience is an array and not a string
             if (!is_array($educations)) {
                 return response()->json(['status' => false, 'message' => 'Certification field is not an array.'], 422);
-            }
-
-            // Find the specific experience record by exp_id
-            $find_education_id = collect($educations)->firstWhere('education_id', $education_id);
-
-            if (!$find_education_id) {
-                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
-            }
-
-            // Find the index of the experience
-            $index = collect($educations)->search(function ($education) use ($education_id) {
-                return $education['education_id'] === $education_id;
+            }  
+             $find_education = collect($educations)->first(function ($education) use ($education_id) {
+                return isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id;
             });
-
-            // Merge the new data with the existing experience data
-            $educations[$index] = array_merge($educations[$index], $newEducationData);
-
-
-            // Save the updated experiences back to the database
+    
+            if (!$find_education) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "Education ID $education_id not found.",
+                 
+                ], 404);
+            }
+    
+            // Find the index of the matched education record
+            $index = collect($educations)->search(fn($education) => isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id);
+    
+            if ($index === false) {
+                return response()->json(['status' => false, 'message' => 'Education not found in array.'], 404);
+            }
+    
+            // Merge the new data inside the "data" array
+            $educations[$index]['data'] = array_merge($educations[$index]['data'], $newEducationData);
+    
+            // Save updated data
             $userEducation->educations = json_encode($educations, JSON_PRETTY_PRINT);
             $userEducation->save();
-
+    
             return response()->json([
                 'status' => true,
-                'message' => 'Educations updated successfully!',
+                'message' => 'Education updated successfully!',
             ], 200);
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
@@ -1993,65 +1999,71 @@ public function add_education(Request $request)
     }
 
     public function delete_education(Request $request)
-    {
-        try {
-            $auth = JWTAuth::user();
-            if (!$auth) {
-                return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-            }
-
-            // Validate input
-            $validator = Validator::make($request->all(), [
-                'education_id' => 'required',
-
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json(['status' => false, 'message' => $validator->errors()], 422);
-            }
-            $education_id = $request->education_id;
-
-            // Find the user document record
-            $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')->where('user_id', $auth->id)->first();
-
-            if (!$userEducation) {
-                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
-            }
-
-            $educations = json_decode($userEducation->educations, true);
-
-            // Ensure that documents is an array and not a string
-            if (!is_array($educations)) {
-                return response()->json(['status' => false, 'message' => 'education field is not an array.'], 422);
-            }
-
-            $educationToDelete = collect($educations)->firstWhere('education_id', $education_id);
-
-
-            if (!$educationToDelete) {
-                return response()->json(['status' => false, 'message' => 'Education ID not found.'], 404);
-            }
-
-
-            // Remove the document from the documents array
-            $updatedEducation = collect($educations)->reject(function ($item) use ($education_id) {
-                return $item['education_id'] == $education_id;
-            })->values()->all();
-
-
-            // Re-encode the documents array to JSON and save it back to the database
-            $userEducation->educations = json_encode($updatedEducation);
-            $userEducation->save();
-
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Education deleted successfully!',
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+{
+    try {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
+
+        // Validate input
+        $validator = Validator::make($request->all(), [
+            'education_id' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+
+        $education_id = (int) $request->education_id; // Ensure it's an integer
+
+        // Fetch user's education records
+        $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')
+            ->where('user_id', $auth->id)
+            ->first();
+
+        if (!$userEducation) {
+            return response()->json(['status' => false, 'message' => 'Education record not found.'], 404);
+        }
+
+        // Decode the education JSON data
+        $educations = json_decode($userEducation->educations, true);
+
+        if (!is_array($educations)) {
+            return response()->json(['status' => false, 'message' => 'Education data is corrupted.'], 422);
+        }
+
+        // Debugging: Check available education IDs
+      
+        // Find the index where `education_id` matches inside `data`
+        $index = collect($educations)->search(fn($education) => isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id);
+
+        if ($index === false) {
+            return response()->json([
+                'status' => false,
+                'message' => "Education ID $education_id not found.",
+                'available_education_ids' => collect($educations)->pluck('data.education_id')->toArray()
+            ], 404);
+        }
+
+        // Remove the education record
+        unset($educations[$index]);
+
+        // Re-index the array (to avoid missing index numbers)
+        $educations = array_values($educations);
+
+        // Save updated educations
+        $userEducation->educations = json_encode($educations, JSON_PRETTY_PRINT);
+        $userEducation->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Education deleted successfully!',
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
     }
+}
 
     public function profile_other_details(Request $request)
     {
@@ -2205,7 +2217,89 @@ public function add_education(Request $request)
 
     public function generate_resume(Request $request)
     {
-        echo 'hii';
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'resume_name' => 'required',
+            'resume'=>'required',
+            'resume_json'=>'required',
+          
+        ], [
+            'resume_name.required' => 'Resume Name is required.',
+            'resume.required' => 'Resume is required.',
+            'resume_json.required'=>'Resume JSON is required.'
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+
+        $resume=new GenerateResume(); 
+        if ($request->hasFile("resume")) {
+           
+            $extension = $request->file('resume')->getClientOriginalExtension();
+
+            $filename = time() . '.' . $extension;
+   
+            if ($disk == 'local') {
+             
+                $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 'public');
+            } elseif ($disk == 's3') {
+          
+               $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 's3');
+            }
+
+            $resume->resume = $imagePath;
+    
+        }
+
+        $resume->user_id= $auth->id;
+        $resume->bash_id= Str::uuid();
+        $resume->resume_name=$request->resume_name;
+        $resume->resume_json=$request->resume_json;
+        $resume->save();
+        return response()->json(['status' => true, 'message' => 'Resume Generated.'], 200);
     }
 
+    public function view_generate_resume()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $resume=GenerateResume::select('id','resume_name','resume','resume_json')->where('user_id',$auth->id)->get();
+        $resume->transform(function ($resume) {
+            if ($resume->resume) {
+    
+                $resume->resume =  env('APP_URL') . Storage::url('app/public/' . $resume->resume);
+            }
+            if ($resume->resume_json) {
+                $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
+            }
+    
+            return $resume;
+        });
+        return response()->json([
+            'status' => true,
+            'message' => 'View Resume.',
+            'data' => $resume
+        ]);
+    }
+  
 }

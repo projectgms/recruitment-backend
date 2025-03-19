@@ -68,6 +68,7 @@ use App\Http\Controllers\Recruiter\RecruiterController;
 
        Route::get('jobseeker/master_resume_json',[JobSeekerProfileController::class,'master_resume_json']);
        Route::post('jobseeker/generate_resume',[JobSeekerProfileController::class,'generate_resume']);
+       Route::get('jobseeker/view_generate_resume',[JobSeekerProfileController::class,'view_generate_resume']);
      
        //Job
        Route::post('jobseeker/job_list',[JobController::class,'job_list']);
