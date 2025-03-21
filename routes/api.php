@@ -12,6 +12,7 @@ use App\Http\Controllers\Recruiter\RecruiterCompanyController;
 
 //Admin
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Recruiter\CandidateController;
 use App\Http\Controllers\Recruiter\RolePermissionController;
 use App\Models\RolePermission;
 
@@ -43,7 +44,7 @@ Route::prefix('v1')->group(function () {
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
 
-        Route::get('recruiter/get_interview_round',[JobPostController::class,'get_interview_round']);
+        Route::get('recruiter/get_interview_round', [JobPostController::class, 'get_interview_round']);
         Route::post('recruiter/add_job_post', [JobPostController::class, 'add_job_post']);
         Route::post('recruiter/view_job_post', [JobPostController::class, 'view_job_post']);
         Route::post('recruiter/update_job_post', [JobPostController::class, 'update_job_post']);
@@ -58,7 +59,9 @@ Route::prefix('v1')->group(function () {
         Route::post('add_user', [RolePermissionController::class, 'add_user']);
         Route::post('view_user', [RolePermissionController::class, 'view_user']);
         Route::post('update_user', [RolePermissionController::class, 'update_user']);
-        Route::post('delete_user',[RolePermissionController::class,'delete_user']);
+        Route::post('delete_user', [RolePermissionController::class, 'delete_user']);
+
+        Route::post('job_applicant',[CandidateController::class,'job_applicant']);
 
         Route::post('logout', [AuthController::class, 'logout']);
 

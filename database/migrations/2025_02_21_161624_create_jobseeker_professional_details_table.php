@@ -21,6 +21,7 @@ return new class extends Migration
                 $table->json('projects')->nullable();
                 $table->text('summary')->nullable();
                 $table->text('skills')->nullable();
+                $table->text('soft_skills')->nullable();
                 $table->text('achievement')->nullable();
                 $table->text('awards')->nullable();
                 $table->text('hobbies')->nullable();

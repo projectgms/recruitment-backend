@@ -18,6 +18,7 @@ class JobSeekerProfessionalDetails extends Model
         'projects',
         'summery',
         'skills',
+        'soft_skills',
         'achievement',
         'awards',
         'hobbies'
