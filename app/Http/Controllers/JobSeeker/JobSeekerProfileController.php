@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\JobSeeker;
 
 use App\Http\Controllers\Controller;
+use App\Models\GenerateResume;
 use App\Models\JobSeekerContactDetails;
 use App\Models\JobSeekerEducationDetails;
 use App\Models\JobSeekerProfessionalDetails;
@@ -52,7 +53,7 @@ class JobSeekerProfileController extends Controller
             'knownLanguages' => 'required|array', // Ensure it's an array
             'knownLanguages.*' => 'string',
             'medicalHistory' => 'required',
-            'dreamCompany' => 'required',
+
             'totalExpYear' => 'required',
             'totalExpMonth' => 'required',
         ], [
@@ -74,7 +75,7 @@ class JobSeekerProfileController extends Controller
             'disability.required' => 'disability is required.',
             'knownLanguages.required' => 'knownLanguages is required.',
             'medicalHistory.required' => 'medicalHistory is required.',
-            'dreamCompany.required' => 'dreamCompany is required.',
+
             'totalExpYear.required' => 'total year Exp is required',
             'totalExpMonth.required' => 'total month Exp is required',
         ]);
@@ -94,7 +95,7 @@ class JobSeekerProfileController extends Controller
             if ($personal->profile_picture) {
                 // Get the file path to delete
                 $existingFilePath = $personal->profile_picture;
-                
+
                 // Determine which disk to use and delete the file accordingly
                 if ($disk == 'local') {
                     // Delete from local disk
@@ -104,27 +105,25 @@ class JobSeekerProfileController extends Controller
                     Storage::disk('s3')->delete($existingFilePath);
                 }
             }
-        
+
             $extension = $request->file('profilePicture')->getClientOriginalExtension();
 
             // Create a unique filename using time and the original extension
             $filename = time() . '.' . $extension;
-    
+
             // Check which disk is selected and store the file accordingly
             if ($disk == 'local') {
-              
+
                 // Store the file on the local disk under the 'jobseeker_profile_picture' folder
                 $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 'public');
             } elseif ($disk == 's3') {
-           
+
                 // Store the file on the S3 disk under the 'jobseeker_profile_picture' folder
-               $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 's3');
+                $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 's3');
             }
-    
+
             // Save the file path to the profile_picture column in the model
             $personal->profile_picture = $imagePath;
-    
-
         }
 
         $personal->first_name = $request->firstName;
@@ -155,7 +154,7 @@ class JobSeekerProfileController extends Controller
             $contact->zipcode = $request->zipCode;
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
-            $contact->dream_company = $request->dreamCompany;
+
             $contact->total_year_exp = $request->totalExpYear;
             $contact->total_month_exp = $request->totalExpMonth;
 
@@ -189,13 +188,21 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
 
-        $personal_data = User::select('users.*', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
+        $personal_data = User::select('users.*', 'job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
             ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
             ->where('users.id', $auth->id)
 
             ->first();
+        if ($personal_data) {
+            // Modify the company logo to include the full URL if it exists
+            if ($personal_data->profile_picture) {
+                $personal_data->profile_picture = env('APP_URL') . Storage::url('app/public/' . $personal_data->profile_picture);
+            } else {
+                // If no logo exists, set it to null or a default image URL
+                $personal_data->profile_picture = null; // Replace with a default image URL if needed
+            }
+        }
 
-          
         return response()->json([
             'status' => true,
             'message' => 'Get Personal Information.',
@@ -245,8 +252,8 @@ class JobSeekerProfileController extends Controller
             return response()->json(['status' => true, 'message' => 'Contact Details Updated']);
         } else {
             $contact = new JobSeekerContactDetails();
-            $contact->user_id= $auth->id;
-            $contact->bash_id= Str::uuid();
+            $contact->user_id = $auth->id;
+            $contact->bash_id = Str::uuid();
             $contact->secondary_mobile = $request->secondaryPhone;
             $contact->secondary_email = $request->otherEmail;
             $contact->linkedin_url = $request->linkedInUrl;
@@ -293,7 +300,7 @@ class JobSeekerProfileController extends Controller
             $validator = Validator::make($request->all(), [
                 'documents' => 'required|array',
                 'documents.*.type' => 'required|string',
-                'documents.*.document' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf|max:2048'
+                'documents.*.file' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf'
             ]);
 
             if ($validator->fails()) {
@@ -308,14 +315,14 @@ class JobSeekerProfileController extends Controller
             foreach ($request->documents as $key => $document) {
                 $filePath = null;
 
-                if ($request->hasFile("documents.$key.document")) {
-                    $oldFilePath = $document['document']; // Assuming the document field contains the current file path
+                if ($request->hasFile("documents.$key.file")) {
+                    $oldFilePath = $document['file']; // Assuming the document field contains the current file path
 
                     // Delete the old file if it exists and it's not null
                     if ($oldFilePath && Storage::exists('public/' . $oldFilePath)) {
                         Storage::delete('public/' . $oldFilePath);
                     }
-                    $file = $request->file("documents.$key.document");
+                    $file = $request->file("documents.$key.file");
                     $filename = time() . '_' . $file->getClientOriginalName();
                     $filePath = $file->storeAs('jobseeker_documents', $filename, 'public');
                 }
@@ -324,7 +331,7 @@ class JobSeekerProfileController extends Controller
                 $documents[] = [
                     'doc_id' => $i,
                     'type' => $document['type'],
-                    'document' => $filePath ? $filePath : null,
+                    'file' => $filePath ? $filePath : null,
                 ];
                 $i++;
             }
@@ -396,7 +403,7 @@ class JobSeekerProfileController extends Controller
             }
 
             // Delete the file from storage
-            $filePath = $documentToDelete['document']; // The path of the file in the 'document' field
+            $filePath = $documentToDelete['file']; // The path of the file in the 'document' field
             if (Storage::exists('public/' . $filePath)) {
                 // If the file exists, delete it
                 Storage::delete('public/' . $filePath);
@@ -491,11 +498,10 @@ class JobSeekerProfileController extends Controller
                 $existingExperiences = []; // Initialize as empty array if it's not a valid array
             }
 
-           
+
             if (!empty($existingExperiences)) {
                 // Find the maximum education_id from the existing array
                 $maxExperienceId = max(array_column($existingExperiences, 'exp_id')) ?? 0;
-
             } else {
                 // If empty, set a default education_id
                 $maxExperienceId = 0;
@@ -505,19 +511,18 @@ class JobSeekerProfileController extends Controller
                 $maxExperienceId++;
                 $newExperience['exp_id'] = $maxExperienceId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userExp->experience = json_encode(array_merge($existingExperiences, $experiences), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userExp->save();
-          
         } else {
             // If no existing record, create a new one
             $userExp = JobSeekerProfessionalDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'experience' => $experiences, // Store the array directly
+                'experience' => json_encode($experiences), // Store the array directly
             ]);
         }
 
@@ -724,7 +729,7 @@ class JobSeekerProfileController extends Controller
                 $existingInternships = []; // Initialize as empty array if it's not a valid array
             }
 
-           
+
             if (!empty($existingInternships)) {
                 // Find the maximum education_id from the existing array
                 $maxInternshipId = max(array_column($existingInternships, 'internship_id')) ?? 0;
@@ -737,20 +742,20 @@ class JobSeekerProfileController extends Controller
                 $maxInternshipId++;
                 $newInternship['internship_id'] = $maxInternshipId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userInternship->internship = json_encode(array_merge($existingInternships, $internships), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userInternship->save();
             // Merge new experiences with the existing ones to avoid duplicates
-         
+
         } else {
             // If no existing record, create a new one
             $userInternship = JobSeekerProfessionalDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'internship' => $internships, // Store the array directly
+                'internship' => json_encode($internships), // Store the array directly
             ]);
         }
 
@@ -935,7 +940,7 @@ class JobSeekerProfileController extends Controller
                 "to" => $project['to'] ? $project['to'] : null,
                 "mentor" => $project['mentor'] ? $project['mentor'] : null,
                 "teamSize" => $project['teamSize'] ? $project['teamSize'] : null,
-
+                "skills" => $project['skills'] ? $project['skills'] : null,
                 "description" => $project['description'] ? $project['description'] : null
             ];
             $i++;
@@ -951,7 +956,7 @@ class JobSeekerProfileController extends Controller
                 $existingProject = []; // Initialize as empty array if it's not a valid array
             }
 
-          
+
             if (!empty($existingProject)) {
                 // Find the maximum education_id from the existing array
                 $maxProjectId = max(array_column($existingProject, 'project_id')) ?? 0;
@@ -964,19 +969,18 @@ class JobSeekerProfileController extends Controller
                 $maxProjectId++;
                 $newProject['project_id'] = $maxProjectId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userProject->projects = json_encode(array_merge($existingProject, $projects), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userProject->save();
-          
         } else {
             // If no existing record, create a new one
             $userProject = JobSeekerProfessionalDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'projects' => $projects, // Store the array directly
+                'projects' => json_encode($projects), // Store the array directly
             ]);
         }
 
@@ -1160,7 +1164,7 @@ class JobSeekerProfileController extends Controller
                 "publicationDate" => $publication['publicationDate'] ? $publication['publicationDate'] : null,
                 "mentor" => $publication['mentor'] ? $publication['mentor'] : null,
                 "authorsCount" => $publication['authorsCount'] ? $publication['authorsCount'] : null,
-                "type" => $publication['type'] ? $publication['type'] : null,
+                "status" => $publication['status'] ? $publication['status'] : null,
                 "skills" => $publication['skills'] ? $publication['skills'] : null,
                 "description" => $publication['description'] ? $publication['description'] : null
             ];
@@ -1177,7 +1181,7 @@ class JobSeekerProfileController extends Controller
                 $existingPublication = []; // Initialize as empty array if it's not a valid array
             }
 
-           
+
             if (!empty($existingPublication)) {
                 // Find the maximum education_id from the existing array
                 $maxPublicationId = max(array_column($existingPublication, 'publication_id')) ?? 0;
@@ -1190,20 +1194,20 @@ class JobSeekerProfileController extends Controller
                 $maxPublicationId++;
                 $newPublication['publication_id'] = $maxPublicationId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userPublication->publications = json_encode(array_merge($existingPublication, $publications), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userPublication->save();
             // Merge new experiences with the existing ones to avoid duplicates
-          
+
         } else {
             // If no existing record, create a new one
             $userPublication = JobSeekerEducationDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'publications' => $publications, // Store the array directly
+                'publications' => json_encode($publications), // Store the array directly
             ]);
         }
 
@@ -1294,7 +1298,7 @@ class JobSeekerProfileController extends Controller
         }
     }
 
-    public function delete_publication(Request $request)
+    public function delete_research_paper(Request $request)
     {
         try {
             $auth = JWTAuth::user();
@@ -1402,7 +1406,7 @@ class JobSeekerProfileController extends Controller
                 $existingTrainig = []; // Initialize as empty array if it's not a valid array
             }
 
-           
+
             if (!empty($existingTrainig)) {
                 // Find the maximum education_id from the existing array
                 $maxTrainingId = max(array_column($existingTrainig, 'training_id')) ?? 0;
@@ -1415,20 +1419,20 @@ class JobSeekerProfileController extends Controller
                 $maxTrainingId++;
                 $newTraining['training_id'] = $maxTrainingId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userTraining->trainings = json_encode(array_merge($existingTrainig, $trainings), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userTraining->save();
             // Merge new experiences with the existing ones to avoid duplicates
-         
+
         } else {
             // If no existing record, create a new one
             $userPublication = JobSeekerEducationDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'trainings' => $trainings, // Store the array directly
+                'trainings' => json_encode($trainings), // Store the array directly
             ]);
         }
 
@@ -1605,15 +1609,16 @@ class JobSeekerProfileController extends Controller
             // Store JSON data with updated file path
             $certifications[] = [
                 "certification_id" => $i,
-                "name" => $certification['name'] ? $certification['name'] : null,
-                "provider" => $certification['provider'] ? $certification['provider'] : null,
-                "enrollmentNumber"=>$certification['enrollmentNumber'] ? $certification['enrollmentNumber'] : null,
-                "validUpto" => $certification['validUpto'] ? $certification['validUpto'] : null,
-                "marksType" => $certification['marksType'] ? $certification['marksType'] : null,
-                "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : null,
-                "max" => $certification['max'] ? $certification['max'] : null,
-                "max" => $certification['max'] ? $certification['max'] : null,
-                "skills" => $certification['skills'] ? $certification['skills'] : null
+                "name" => $certification['name'] ? $certification['name'] : ' ',
+                "provider" => $certification['provider'] ? $certification['provider'] : ' ',
+                "enrollmentNumber" => $certification['enrollmentNumber'] ? $certification['enrollmentNumber'] : ' ',
+                "validUpto" => $certification['validUpto'] ? $certification['validUpto'] : ' ',
+                "marksType" => $certification['marksType'] ? $certification['marksType'] : ' ',
+                "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : '0',
+                "max" => $certification['max'] ? $certification['max'] : '0',
+
+                "skills" => $certification['skills'] ? $certification['skills'] : ' ',
+                "description" => $certification['description'] ? $certification['description'] : ' ',
             ];
             $i++;
         }
@@ -1627,8 +1632,8 @@ class JobSeekerProfileController extends Controller
             if (!is_array($existingCertification)) {
                 $existingCertification = []; // Initialize as empty array if it's not a valid array
             }
-          
-          
+
+
             if (!empty($existingCertification)) {
                 // Find the maximum education_id from the existing array
                 $maxCertificationId = max(array_column($existingCertification, 'certification_id')) ?? 0;
@@ -1636,16 +1641,16 @@ class JobSeekerProfileController extends Controller
                 // If empty, set a default education_id
                 $maxCertificationId = 0;
             }
-            
+
             // Assign new certification_ids starting from the max + 1
             foreach ($certifications as &$newCertification) {
                 $maxCertificationId++;
                 $newCertification['certification_id'] = $maxCertificationId;
             }
-    
+
             // Merge the existing certifications with the new ones
             $userCertification->certifications = json_encode(array_merge($existingCertification, $certifications), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
+            //   $userExp->experience = $experiences;
             // Save the updated certifications back to the database
             $userCertification->save();
         } else {
@@ -1653,7 +1658,7 @@ class JobSeekerProfileController extends Controller
             $userCertification = JobSeekerEducationDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'certifications' => $certifications, // Store the array directly
+                'certifications' => json_encode($certifications), // Store the array directly
             ]);
         }
 
@@ -1680,7 +1685,7 @@ class JobSeekerProfileController extends Controller
         ], 200);
     }
 
-    
+
     public function update_certification(Request $request)
     {
         try {
@@ -1771,7 +1776,7 @@ class JobSeekerProfileController extends Controller
                 return response()->json(['status' => false, 'message' => 'Certification not found.'], 404);
             }
 
-            $certifications = json_decode($userCertification->certification, true);
+            $certifications = json_decode($userCertification->certifications, true);
 
             // Ensure that documents is an array and not a string
             if (!is_array($certifications)) {
@@ -1806,6 +1811,7 @@ class JobSeekerProfileController extends Controller
         }
     }
 
+
     public function add_education(Request $request)
     {
         $auth = JWTAuth::user();
@@ -1815,26 +1821,33 @@ class JobSeekerProfileController extends Controller
 
         // Validate input
         $validator = Validator::make($request->all(), [
-            'educations' => 'required|array',
-
+            'educations' => 'required', // Ensure educations field is present
         ]);
 
         if ($validator->fails()) {
             return response()->json(['status' => false, 'message' => $validator->errors()], 422);
         }
 
-
         $educations = [];
 
-        // Handle file uploads
-        $i = 1;
-        foreach ($request->educations as $key => $education) {
+        // Check if input is an object instead of an array and convert it to an array
 
-            // Store JSON data with updated file path
+        $request->educations = [$request->educations];
+
+        // Process new education entries
+        foreach ($request->educations as $education) {
+            // Ensure 'data' is present and is an array
+            if (!isset($education['data']) || !is_array($education['data'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Invalid education data format. "data" must be an array.'
+                ], 422);
+            }
+
             $educations[] = [
-                "type" => $education['type'], // Adding type (e.g. 10th, 12th)
+                "type" => $education['type'] ?? 'Unknown', // Default value if 'type' is missing
                 "data" => [
-                    "education_id" => $i,
+                    "education_id" => null, // Will be updated dynamically
                     "qualification" => $education['data']['qualification'] ?? null,
                     "stream" => $education['data']['stream'] ?? null,
                     "college" => $education['data']['college'] ?? null,
@@ -1848,55 +1861,52 @@ class JobSeekerProfileController extends Controller
                     "activeBacklogs" => $education['data']['activeBacklogs'] ?? null
                 ]
             ];
-            $i++;
         }
 
+        // Fetch the existing education record for the user
         $userEducation = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
-       
+
         if ($userEducation) {
+            // Decode existing education data
             $existingEducation = json_decode($userEducation->educations, true);
 
-            // Check if the internship field is empty or not in array format
+            // Ensure existing education is an array
             if (!is_array($existingEducation)) {
-                $existingEducation = []; // Initialize as empty array if it's not a valid array
+                $existingEducation = [];
             }
-           
-            if (!empty($existingEducation)) {
-                // Find the maximum education_id from the existing array
-                $maxEducationId = max(array_column($existingEducation, 'data.education_id'));
-            } else {
-                // If empty, set a default education_id
-                $maxEducationId = 0;
-            }
-            
-           
-            // Assign new certification_ids starting from the max + 1
+
+            // Get the highest existing education_id
+            $educationIds = array_column(array_column($existingEducation, 'data'), 'education_id');
+            $maxEducationId = !empty($educationIds) ? max($educationIds) : 0;
+
+            // Assign new education_ids and append them
             foreach ($educations as &$newEducation) {
                 $maxEducationId++;
                 $newEducation['data']['education_id'] = $maxEducationId;
             }
-    
-            // Merge the existing certifications with the new ones
+
+            // Merge the existing and new educations
             $userEducation->educations = json_encode(array_merge($existingEducation, $educations), JSON_PRETTY_PRINT);
-         //   $userExp->experience = $experiences;
-            // Save the updated certifications back to the database
             $userEducation->save();
         } else {
             // If no existing record, create a new one
+            foreach ($educations as $index => &$newEducation) {
+                $newEducation['data']['education_id'] = $index + 1;
+            }
+
             $userEducation = JobSeekerEducationDetails::create([
                 'user_id' => $auth->id,
                 'bash_id' => Str::uuid(),
-                'educations' => $educations, // Store the array directly
+                'educations' => json_encode($educations, JSON_PRETTY_PRINT),
             ]);
         }
 
-
         return response()->json([
             'status' => true,
-            'message' => 'Education Added successfully!',
-
+            'message' => 'Education added successfully!',
         ], 200);
     }
+
 
     public function get_education()
     {
@@ -1923,8 +1933,8 @@ class JobSeekerProfileController extends Controller
 
             // Validate input
             $validator = Validator::make($request->all(), [
-                'education_id' => 'required|integer',
-                'educations' => 'required|array', // Make sure experience data is passed in the request
+                'education_id' => 'required',
+                'educations' => 'required', // Make sure experience data is passed in the request
             ]);
 
             if ($validator->fails()) {
@@ -1947,30 +1957,35 @@ class JobSeekerProfileController extends Controller
             if (!is_array($educations)) {
                 return response()->json(['status' => false, 'message' => 'Certification field is not an array.'], 422);
             }
-
-            // Find the specific experience record by exp_id
-            $find_education_id = collect($educations)->firstWhere('education_id', $education_id);
-
-            if (!$find_education_id) {
-                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
-            }
-
-            // Find the index of the experience
-            $index = collect($educations)->search(function ($education) use ($education_id) {
-                return $education['education_id'] === $education_id;
+            $find_education = collect($educations)->first(function ($education) use ($education_id) {
+                return isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id;
             });
 
-            // Merge the new data with the existing experience data
-            $educations[$index] = array_merge($educations[$index], $newEducationData);
+            if (!$find_education) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "Education ID $education_id not found.",
 
+                ], 404);
+            }
 
-            // Save the updated experiences back to the database
+            // Find the index of the matched education record
+            $index = collect($educations)->search(fn($education) => isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id);
+
+            if ($index === false) {
+                return response()->json(['status' => false, 'message' => 'Education not found in array.'], 404);
+            }
+
+            // Merge the new data inside the "data" array
+            $educations[$index]['data'] = array_merge($educations[$index]['data'], $newEducationData);
+
+            // Save updated data
             $userEducation->educations = json_encode($educations, JSON_PRETTY_PRINT);
             $userEducation->save();
 
             return response()->json([
                 'status' => true,
-                'message' => 'Educations updated successfully!',
+                'message' => 'Education updated successfully!',
             ], 200);
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
@@ -1987,47 +2002,53 @@ class JobSeekerProfileController extends Controller
 
             // Validate input
             $validator = Validator::make($request->all(), [
-                'education_id' => 'required',
-
+                'education_id' => 'required|integer',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'message' => $validator->errors()], 422);
             }
-            $education_id = $request->education_id;
 
-            // Find the user document record
-            $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')->where('user_id', $auth->id)->first();
+            $education_id = (int) $request->education_id; // Ensure it's an integer
+
+            // Fetch user's education records
+            $userEducation = JobSeekerEducationDetails::select('educations', 'user_id', 'id')
+                ->where('user_id', $auth->id)
+                ->first();
 
             if (!$userEducation) {
-                return response()->json(['status' => false, 'message' => 'Education not found.'], 404);
+                return response()->json(['status' => false, 'message' => 'Education record not found.'], 404);
             }
 
+            // Decode the education JSON data
             $educations = json_decode($userEducation->educations, true);
 
-            // Ensure that documents is an array and not a string
             if (!is_array($educations)) {
-                return response()->json(['status' => false, 'message' => 'education field is not an array.'], 422);
+                return response()->json(['status' => false, 'message' => 'Education data is corrupted.'], 422);
             }
 
-            $educationToDelete = collect($educations)->firstWhere('education_id', $education_id);
+            // Debugging: Check available education IDs
 
+            // Find the index where `education_id` matches inside `data`
+            $index = collect($educations)->search(fn($education) => isset($education['data']['education_id']) && (int) $education['data']['education_id'] === $education_id);
 
-            if (!$educationToDelete) {
-                return response()->json(['status' => false, 'message' => 'Education ID not found.'], 404);
+            if ($index === false) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "Education ID $education_id not found.",
+                    'available_education_ids' => collect($educations)->pluck('data.education_id')->toArray()
+                ], 404);
             }
 
+            // Remove the education record
+            unset($educations[$index]);
 
-            // Remove the document from the documents array
-            $updatedEducation = collect($educations)->reject(function ($item) use ($education_id) {
-                return $item['education_id'] == $education_id;
-            })->values()->all();
+            // Re-index the array (to avoid missing index numbers)
+            $educations = array_values($educations);
 
-
-            // Re-encode the documents array to JSON and save it back to the database
-            $userEducation->educations = json_encode($updatedEducation);
+            // Save updated educations
+            $userEducation->educations = json_encode($educations, JSON_PRETTY_PRINT);
             $userEducation->save();
-
 
             return response()->json([
                 'status' => true,
@@ -2051,15 +2072,15 @@ class JobSeekerProfileController extends Controller
 
         $validator = Validator::make($request->all(), [
             'summary' => 'required',
-            'expertise' => 'required|array',
-            'extraCurricular'=>'null|array',
-            'achievements'=>'null|array'
-          
+            'skills' => 'required|array',
+            'extraCurricular' => 'array',
+            'achievements' => 'array',
+            'softSkills' => 'array'
 
         ], [
             'summary.required' => 'Summary is required.',
-            'expertise.required' => 'Skill is required.',
-           
+            'skills.required' => 'Skill is required.',
+
 
         ]);
         if ($validator->fails()) {
@@ -2073,19 +2094,21 @@ class JobSeekerProfileController extends Controller
         $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
         if ($other_details) {
             $other_details->summary = $request->summary;
-            $other_details->skills = $request->expertise;
+            $other_details->skills = $request->skills;
             $other_details->achievement = $request->achievements;
             $other_details->extra_curricular = $request->extraCurricular;
+            $other_details->soft_skills = $request->softSkills;
             $other_details->save();
-            return response()->json(['status' => true, 'message' => 'Other Details Updated']);
+            return response()->json(['status' => true, 'message' => 'Other Details Added']);
         } else {
             $other_details = new JobSeekerProfessionalDetails();
-            $other_details->user_id= $auth->id;
-            $other_details->bash_id= Str::uuid();
+            $other_details->user_id = $auth->id;
+            $other_details->bash_id = Str::uuid();
             $other_details->summary = $request->summary;
-            $other_details->skills = $request->expertise;
+            $other_details->skills = $request->skills;
             $other_details->achievement = $request->achievements;
             $other_details->extra_curricular = $request->extraCurricular;
+            $other_details->soft_skills = $request->softSkills;
             $other_details->save();
             return response()->json(['status' => true, 'message' => 'Other Details Added']);
         }
@@ -2101,7 +2124,7 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
 
-        $contact_data = JobSeekerProfessionalDetails::select('summary', 'skills', 'achievement', 'extra_curricular')
+        $contact_data = JobSeekerProfessionalDetails::select('summary', 'skills', 'achievement', 'extra_curricular', 'soft_skills')
 
             ->where('user_id', $auth->id)
 
@@ -2112,8 +2135,7 @@ class JobSeekerProfileController extends Controller
             'data' => $contact_data
         ]);
     }
-
-    public function generate_resume_json()
+    public function check_profile_complete()
     {
         $auth = JWTAuth::user();
 
@@ -2124,16 +2146,155 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
 
-        $personal_data = User::select('users.*', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company',
-        'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
-        'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
-        'jobseeker_professional_details.experience','jobseeker_professional_details.summary','jobseeker_professional_details.skills','jobseeker_professional_details.achievement','jobseeker_professional_details.extra_curricular','jobseeker_professional_details.projects','jobseeker_professional_details.internship')
-        ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->join('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
-        ->join('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
-        ->where('users.id', $auth->id)
+        $personal_data = User::select(
+            'users.*',
+            'job_seeker_contact_details.country',
+            'job_seeker_contact_details.state',
+            'job_seeker_contact_details.city',
+            'job_seeker_contact_details.zipcode',
+            'job_seeker_contact_details.course',
+            'job_seeker_contact_details.primary_specialization',
+            'job_seeker_contact_details.dream_company',
+            'job_seeker_contact_details.total_year_exp',
+            'job_seeker_contact_details.total_month_exp',
+            'job_seeker_contact_details.secondary_mobile',
+            'job_seeker_contact_details.secondary_email',
+            'job_seeker_contact_details.linkedin_url',
+            'job_seeker_contact_details.github_url',
+            'jobseeker_education_details.certifications',
+            'jobseeker_education_details.publications',
+            'jobseeker_education_details.trainings',
+            'jobseeker_education_details.educations',
+            'jobseeker_professional_details.experience',
+            'jobseeker_professional_details.summary',
+            'jobseeker_professional_details.soft_skills',
+            'jobseeker_professional_details.skills',
+            'jobseeker_professional_details.achievement',
+            'jobseeker_professional_details.extra_curricular',
+            'jobseeker_professional_details.projects',
+            'jobseeker_professional_details.internship'
+        )
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+      
+            ->where('users.id', $auth->id)
 
-        ->first();
+            ->first();
+        $knownLanguages = json_decode($personal_data->language_known, true);
+
+        $responseData = [
+            'personalInformation' => [
+                'profilePicture' => $personal_data->profile_picture, // Assuming this field exists
+                'firstName' => $personal_data->first_name,
+                'middleName' => $personal_data->middle_name,
+                'lastName' => $personal_data->last_name,
+                'dateOfBirth' => $personal_data->dob,
+                'gender' => $personal_data->gender,
+                'maritalStatus' => $personal_data->marital_status,
+                'addressLine1' => $personal_data->location,
+                'addressLine2' => '',
+                'city' => $personal_data->city,
+                'state' => $personal_data->state,
+                'country' => $personal_data->country,
+                'zipCode' => $personal_data->zipcode,
+                'course' => $personal_data->course,
+                'specialization' => $personal_data->primary_specialization,
+                'bloodGroup' => $personal_data->blood_group,
+                'medicalHistory' => $personal_data->medical_history,
+                'disability' => $personal_data->disability,
+                'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
+                'totalExpYear' => $personal_data->total_year_exp,
+                'totalExpMonth' => $personal_data->total_month_exp,
+            ],
+           
+            'projectDetails' => json_decode($personal_data->projects),
+          
+            'otherDetails' => [
+                'summary' => $personal_data->summary,
+                'skills' => json_decode($personal_data->skills),
+                'achievement' => $personal_data->achievement,
+                'extra_curricular' => $personal_data->extra_curricular,
+                'soft_skills' => $personal_data->soft_skills
+            ],
+            'educationDetails' => json_decode($personal_data->educations),
+           
+        ];
+        $errors = [];
+
+        if (empty($responseData['personalInformation'])) {
+            $errors[] = 'Personal Information required';
+        }
+        if (empty($responseData['educationDetails'])) {
+            $errors[] = 'Education Details required';
+        }
+        if (empty($responseData['projectDetails'])) {
+            $errors[] = 'Project Details required';
+        }
+        if (empty($responseData['otherDetails'])) {
+            $errors[] = 'Other Details required';
+        }
+    
+        // If there are errors, return response with status false
+        if (!empty($errors)) {
+            return response()->json([
+                'status' => false,
+                'message' => $errors, // Returning as an array
+            ]);
+        }
+        return response()->json([
+            'status' => true,
+            'message' => 'Get Other Information.',
+            'data' => $responseData
+        ]);
+    
+    }
+    public function master_resume_json()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $personal_data = User::select(
+            'users.*',
+            'job_seeker_contact_details.country',
+            'job_seeker_contact_details.state',
+            'job_seeker_contact_details.city',
+            'job_seeker_contact_details.zipcode',
+            'job_seeker_contact_details.course',
+            'job_seeker_contact_details.primary_specialization',
+            'job_seeker_contact_details.dream_company',
+            'job_seeker_contact_details.total_year_exp',
+            'job_seeker_contact_details.total_month_exp',
+            'job_seeker_contact_details.secondary_mobile',
+            'job_seeker_contact_details.secondary_email',
+            'job_seeker_contact_details.linkedin_url',
+            'job_seeker_contact_details.github_url',
+            'jobseeker_education_details.certifications',
+            'jobseeker_education_details.publications',
+            'jobseeker_education_details.trainings',
+            'jobseeker_education_details.educations',
+            'jobseeker_professional_details.experience',
+            'jobseeker_professional_details.summary',
+            'jobseeker_professional_details.soft_skills',
+            'jobseeker_professional_details.skills',
+            'jobseeker_professional_details.achievement',
+            'jobseeker_professional_details.extra_curricular',
+            'jobseeker_professional_details.projects',
+            'jobseeker_professional_details.internship'
+        )
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+      
+            ->where('users.id', $auth->id)
+
+            ->first();
         $knownLanguages = json_decode($personal_data->language_known, true);
 
         $responseData = [
@@ -2152,34 +2313,36 @@ class JobSeekerProfileController extends Controller
                 'city' => $personal_data->city,
                 'state' => $personal_data->state,
                 'country' => $personal_data->country,
-                 'zipCode' => $personal_data->zipcode,
-                 'course' => $personal_data->course,
+                'zipCode' => $personal_data->zipcode,
+                'course' => $personal_data->course,
                 'specialization' => $personal_data->primary_specialization,
                 'bloodGroup' => $personal_data->blood_group,
                 'medicalHistory' => $personal_data->medical_history,
-               'disability' => $personal_data->disability,
+                'disability' => $personal_data->disability,
                 'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
-                 'totalExpYear' => $personal_data->total_year_exp,
-                 'totalExpMonth' => $personal_data->total_month_exp,
+                'totalExpYear' => $personal_data->total_year_exp,
+                'totalExpMonth' => $personal_data->total_month_exp,
             ],
-             'certificationDetails' => json_decode($personal_data->certifications),
-             'contactDetails' =>[
-                'secondaryPhone'=>$personal_data->secondary_mobile,
-                'otherEmail'=>$personal_data->secondary_email,
-                'linkedInUrl'=>$personal_data->linkedin_url,
-                'githubUrl'=>$personal_data->github_url
-             ],
-             'professionalDetails' => json_decode($personal_data->experience),
-             'projectDetails' => json_decode($personal_data->projects),
+            'certificationDetails' => json_decode($personal_data->certifications),
+            'contactDetails' => [
+                'secondaryPhone' => $personal_data->secondary_mobile,
+                'otherEmail' => $personal_data->secondary_email,
+                'linkedInUrl' => $personal_data->linkedin_url,
+                'githubUrl' => $personal_data->github_url
+            ],
+            'professionalDetails' => json_decode($personal_data->experience),
+            'projectDetails' => json_decode($personal_data->projects),
             'researchPapers' => json_decode($personal_data->publications),
-             'trainingDetails' => json_decode($personal_data->trainings),
-             'otherDetails' => ['summary'=>$personal_data->summary,
-             'expertise'=>json_decode($personal_data->skills),
-             'achievements'=>$personal_data->achievement,
-             'extraCurricular'=>$personal_data->extra_curricular
-             ],
-             'educationDetails' => json_decode($personal_data->educations),
-             'internshipDetails' => json_decode($personal_data->internship),
+            'trainingDetails' => json_decode($personal_data->trainings),
+            'otherDetails' => [
+                'summary' => $personal_data->summary,
+                'skills' => json_decode($personal_data->skills),
+                'achievement' => $personal_data->achievement,
+                'extra_curricular' => $personal_data->extra_curricular,
+                'soft_skills' => $personal_data->soft_skills
+            ],
+            'educationDetails' => json_decode($personal_data->educations),
+            'internshipDetails' => json_decode($personal_data->internship),
         ];
         return response()->json([
             'status' => true,
@@ -2188,4 +2351,89 @@ class JobSeekerProfileController extends Controller
         ]);
     }
 
+    public function generate_resume(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'resume_name' => 'required',
+            'resume' => 'required',
+            'resume_json' => 'required',
+
+        ], [
+            'resume_name.required' => 'Resume Name is required.',
+            'resume.required' => 'Resume is required.',
+            'resume_json.required' => 'Resume JSON is required.'
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+
+        $resume = new GenerateResume();
+        if ($request->hasFile("resume")) {
+
+            $extension = $request->file('resume')->getClientOriginalExtension();
+
+            $filename = time() . '.' . $extension;
+
+            if ($disk == 'local') {
+
+                $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 'public');
+            } elseif ($disk == 's3') {
+
+                $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 's3');
+            }
+
+            $resume->resume = $imagePath;
+        }
+
+        $resume->user_id = $auth->id;
+        $resume->bash_id = Str::uuid();
+        $resume->resume_name = $request->resume_name;
+        $resume->resume_json = $request->resume_json;
+        $resume->save();
+        return response()->json(['status' => true, 'message' => 'Resume Generated.'], 200);
+    }
+
+    public function view_generate_resume()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $resume = GenerateResume::select('id', 'resume_name', 'resume', 'resume_json')->where('user_id', $auth->id)->get();
+        $resume->transform(function ($resume) {
+            if ($resume->resume) {
+
+                $resume->resume =  env('APP_URL') . Storage::url('app/public/' . $resume->resume);
+            }
+            if ($resume->resume_json) {
+                $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
+            }
+
+            return $resume;
+        });
+        return response()->json([
+            'status' => true,
+            'message' => 'View Resume.',
+            'data' => $resume
+        ]);
+    }
 }

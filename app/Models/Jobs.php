@@ -25,6 +25,7 @@ class Jobs extends Model
         'salary_range',
         'skills_required',
         'experience_required',
+        'round',
         'expiration_date',
         'expiration_time',
         'responsibilities',

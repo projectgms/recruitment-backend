@@ -60,7 +60,7 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
-        'recruiter'
+        
     ];
 
     /**
@@ -72,19 +72,11 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
     
-    public function recruiter(): HasOne
-    {
-        return $this->hasOne(Recruiter::class, 'user_id');
-    }
-
-    public function getCompanyIdAttribute()
-    {
-        return $this->recruiter ? $this->recruiter->company_id : null;
-    }
+  
     public function getJWTCustomClaims()
     {
         return [
-            'company_id' => $this->company_id
+          
         ];
     }
     /**

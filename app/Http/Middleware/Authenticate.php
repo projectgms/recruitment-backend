@@ -30,17 +30,17 @@ class Authenticate extends Middleware
                 try {
                     // If JWT is valid, user will be authenticated, otherwise an exception will be thrown
                     $user = JWTAuth::parseToken()->authenticate();
-
+                    Log::warning('auth api');
                     if ($user) {
                         // Proceed to the next middleware or controller action
                         return $next($request);
                     } else {
                         // Token is invalid, return unauthorized response
-                        return response()->json(['error' => 'Unauthorized'], 401);
+                        return response()->json(['status'=>'false','message' => 'Unauthorized'], 401);
                     }
                 } catch (\Exception $e) {
                     // If there is an error (e.g., token missing, expired), return unauthorized response
-                    return response()->json(['error' => 'Unauthorized'], 401);
+                    return response()->json(['status'=>'false','message' => 'Unauthorized'], 401);
                 }
             }
 
@@ -51,6 +51,6 @@ class Authenticate extends Middleware
         }
 
         // If no user is authenticated for any guard, return unauthorized response
-        return response()->json(['error' => 'Unauthorized'], 401);
+        return response()->json(['status'=>'false','message' => 'Unauthorized'], 401);
     }
 }

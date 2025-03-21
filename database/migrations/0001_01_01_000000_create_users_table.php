@@ -23,6 +23,8 @@ return new class extends Migration
             $table->string('password');
             $table->string('mobile');
             $table->string('role');
+            $table->string('role_id');
+            $table->string('company_id')->nullable();
             $table->text('profile_picture')->nullable();
             $table->text('location')->nullable();
             $table->string('gender')->nullable();
@@ -36,7 +38,7 @@ return new class extends Migration
             $table->integer('active');
             $table->string('status');
             $table->dateTime('last_login');
-            $table->string('ip_address');
+            $table->string('ip_address')->nullable();
             $table->timestamps();
         });
     }

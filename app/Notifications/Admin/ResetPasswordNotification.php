@@ -1,7 +1,6 @@
 <?php
 
-namespace App\Notifications\Recruiter;
-use Illuminate\Support\Facades\Crypt;
+namespace App\Notifications\Admin;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,13 +33,10 @@ class ResetPasswordNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $frontendUrl = env('RECRUITER_FRONTEND_URL'); // e.g., https://gms-sdv-oem.vercel.app/auth/newpassword
-        $encryptedEmail = encrypt($notifiable->getEmailForPasswordReset());
+        $frontendUrl = env('SUPERADMIN_FRONTEND_URL'); // e.g., https://gms-sdv-oem.vercel.app/auth/newpassword
 
-        // Build the URL with the encrypted & URL-encoded email
-        $url = "{$frontendUrl}?token={$this->token}&email=" .$encryptedEmail;
         // Construct the reset link
-      //  $url = "{$frontendUrl}?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset());
+        $url = "{$frontendUrl}?token={$this->token}&email=" . urlencode($notifiable->getEmailForPasswordReset());
 
         return (new MailMessage)
             ->subject('Reset Password Notification')

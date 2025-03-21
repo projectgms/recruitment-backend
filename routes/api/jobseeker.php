@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\JobSeeker\JobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +66,18 @@ use App\Http\Controllers\Recruiter\RecruiterController;
        Route::post('jobseeker/profile_other_details',[JobSeekerProfileController::class,'profile_other_details']);
        Route::get('jobseeker/get_profile_other_details',[JobSeekerProfileController::class,'get_profile_other_details']);
 
-       Route::get('jobseeker/generate_resume_json',[JobSeekerProfileController::class,'generate_resume_json']);
+       Route::get('jobseeker/check_profile_complete',[JobSeekerProfileController::class,'check_profile_complete']);
+
+       Route::get('jobseeker/master_resume_json',[JobSeekerProfileController::class,'master_resume_json']);
+       Route::post('jobseeker/generate_resume',[JobSeekerProfileController::class,'generate_resume']);
+       Route::get('jobseeker/view_generate_resume',[JobSeekerProfileController::class,'view_generate_resume']);
+     
+       //Job
+       Route::post('jobseeker/job_list',[JobController::class,'job_list']);
+       Route::post('jobseeker/job_list_filter',[JobController::class,'job_list_filter']);
+       Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
+       Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
+
+
 
     });
