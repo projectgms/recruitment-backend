@@ -500,9 +500,9 @@ class RolePermissionController extends Controller
         // Check if the role permission record exists
         if ($check_user) {
 
-          
- $check_user->active = '0';
- $check_user->save();
+
+            $check_user->active = '0';
+            $check_user->save();
         }
         return response()->json([
             'status' => true,

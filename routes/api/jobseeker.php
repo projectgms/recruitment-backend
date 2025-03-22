@@ -20,6 +20,7 @@ use App\Http\Controllers\Recruiter\RecruiterController;
        Route::get('jobseeker/profile', [JobSeekerAuthController::class, 'profile']);
        Route::post('jobseeker/personal_info',[JobSeekerProfileController::class,'personal_info']);
        Route::get('jobseeker/get_personal_info',[JobSeekerProfileController::class,'get_personal_info']);
+       Route::post('jobseeker/change_password',[JobSeekerAuthController::class,'change_password']);
 
        Route::post('jobseeker/contact_details',[JobSeekerProfileController::class,'contact_details']);
        Route::get('jobseeker/get_contact_details',[JobSeekerProfileController::class,'get_contact_details']);
@@ -65,6 +66,7 @@ use App\Http\Controllers\Recruiter\RecruiterController;
 
        Route::post('jobseeker/profile_other_details',[JobSeekerProfileController::class,'profile_other_details']);
        Route::get('jobseeker/get_profile_other_details',[JobSeekerProfileController::class,'get_profile_other_details']);
+       Route::post('jobseeker/open_to_work',[JobSeekerProfileController::class,'open_to_work']);
 
        Route::get('jobseeker/check_profile_complete',[JobSeekerProfileController::class,'check_profile_complete']);
 

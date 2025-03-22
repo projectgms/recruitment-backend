@@ -40,6 +40,8 @@ Route::prefix('v1')->group(function () {
     Route::post('recruiter/reset_password', [RecruiterController::class, 'reset_password']);
     Route::post('decrypt_email', [RecruiterController::class, 'decrypt_email']);
     Route::middleware(['auth:api', \App\Http\Middleware\AttachPermissionsMiddleware::class, \App\Http\Middleware\DynamicRoleMiddleware::class])->group(function () {
+        
+        //Recruiter Routes
         Route::get('recruiter/profile', [RecruiterAuthController::class, 'profile']);
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
@@ -62,11 +64,15 @@ Route::prefix('v1')->group(function () {
         Route::post('delete_user', [RolePermissionController::class, 'delete_user']);
 
         Route::post('job_applicant',[CandidateController::class,'job_applicant']);
+        Route::post('open_to_work',[CandidateController::class,'open_to_work']);
 
         Route::post('logout', [AuthController::class, 'logout']);
 
         //Admin Routes
         Route::get('admin/profile', [AdminAuthController::class, 'profile']);
+
+        //Admin and Recruiter Common routes
+        
     });
 });
 

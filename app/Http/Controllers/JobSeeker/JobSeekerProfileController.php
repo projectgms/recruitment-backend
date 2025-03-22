@@ -288,82 +288,91 @@ class JobSeekerProfileController extends Controller
 
     public function add_document(Request $request)
     {
-
         try {
-            // Authenticate user
+            // ✅ Authenticate user
             $auth = JWTAuth::user();
             if (!$auth) {
                 return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
             }
-
-            // Validate input
+        
+            // ✅ Validate input
             $validator = Validator::make($request->all(), [
-                'documents' => 'required|array',
-                'documents.*.type' => 'required|string',
-                'documents.*.file' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf'
+                'documents' => 'required'
             ]);
-
+        
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'message' => $validator->errors()], 422);
             }
-
-
-            $documents = [];
-
-            // Handle file uploads
-            $i = 1;
-            foreach ($request->documents as $key => $document) {
+        
+            $input = $request->documents;
+        
+            // ✅ Normalize to array
+            if (!is_array($input) || !array_is_list($input)) {
+                $input = [$input];
+            }
+        
+            $newDocuments = [];
+        
+            foreach ($input as $index => $doc) {
                 $filePath = null;
-
-                if ($request->hasFile("documents.$key.file")) {
-                    $oldFilePath = $document['file']; // Assuming the document field contains the current file path
-
-                    // Delete the old file if it exists and it's not null
-                    if ($oldFilePath && Storage::exists('public/' . $oldFilePath)) {
-                        Storage::delete('public/' . $oldFilePath);
-                    }
-                    $file = $request->file("documents.$key.file");
+        
+                // ✅ Check if this document has a file uploaded (documents.0.file, documents.1.file, etc.)
+                if ($request->hasFile("documents.file")) {
+                    $file = $request->file("documents.file");
                     $filename = time() . '_' . $file->getClientOriginalName();
                     $filePath = $file->storeAs('jobseeker_documents', $filename, 'public');
                 }
-
-                // Store JSON data with updated file path
-                $documents[] = [
-                    'doc_id' => $i,
-                    'type' => $document['type'],
-                    'file' => $filePath ? $filePath : null,
+        
+                $newDocuments[] = [
+                    "doc_id" => null,
+                    "type"    => $doc['type'] ?? 'Unknown',
+                    "file"    => $filePath ?? $doc['file'] ?? null, // fallback if no new upload
                 ];
-                $i++;
             }
+        
+            // ✅ Get existing documents
             $userDocument = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
-
+            $existingDocuments = $userDocument ? json_decode($userDocument->documents, true) : [];
+        
+            if (!is_array($existingDocuments)) {
+                $existingDocuments = [];
+            }
+        
+            // ✅ Assign next docu_ids
+            $lastId = collect($existingDocuments)->pluck('doc_id')->max() ?? 0;
+        
+            foreach ($newDocuments as &$doc) {
+                $lastId++;
+                $doc['doc_id'] = $lastId;
+            }
+        
+            $finalData = array_merge($existingDocuments, $newDocuments);
+        
+            // ✅ Save or update
             if ($userDocument) {
-                // Update the educations column with new data
-                $userDocument->documents = $documents;
+                $userDocument->documents = json_encode($finalData, JSON_PRETTY_PRINT);
                 $userDocument->save();
             } else {
-                // If no existing record, create a new one
-                $userDocument = JobSeekerEducationDetails::create([
+                JobSeekerEducationDetails::create([
                     'user_id' => $auth->id,
                     'bash_id' => Str::uuid(),
-                    'documents' => $documents, // Store the array directly
+                    'documents' => json_encode($finalData, JSON_PRETTY_PRINT),
                 ]);
             }
-
-
+        
             return response()->json([
                 'status' => true,
-                'message' => 'Documents uploaded successfully!',
-
-            ], 201);
+                'message' => 'Documents added successfully!',
+            ], 200);
+        
         } catch (\Exception $e) {
-
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
     public function delete_document(Request $request)
     {
+
         try {
             $auth = JWTAuth::user();
             if (!$auth) {
@@ -372,53 +381,53 @@ class JobSeekerProfileController extends Controller
 
             // Validate input
             $validator = Validator::make($request->all(), [
-                'doc_id' => 'required',
-
+                'doc_id' => 'required|integer',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'message' => $validator->errors()], 422);
             }
-            $doc_id = $request->doc_id;
 
-            // Find the user document record
-            $userDocument = JobSeekerEducationDetails::select('documents')->where('user_id', $auth->id)->first();
+            $doc_id = (int) $request->doc_id; // Ensure it's an integer
+
+            // Fetch user's education records
+            $userDocument= JobSeekerEducationDetails::select('documents', 'user_id', 'id')
+                ->where('user_id', $auth->id)
+                ->first();
 
             if (!$userDocument) {
-                return response()->json(['status' => false, 'message' => 'Document not found.'], 404);
+                return response()->json(['status' => false, 'message' => 'Document record not found.'], 404);
             }
 
+            // Decode the education JSON data
             $documents = json_decode($userDocument->documents, true);
 
-            // Ensure that documents is an array and not a string
             if (!is_array($documents)) {
-                return response()->json(['status' => false, 'message' => 'Documents field is not an array.'], 422);
+                return response()->json(['status' => false, 'message' => 'Documents data is corrupted.'], 422);
             }
 
-            $documentToDelete = collect($documents)->firstWhere('doc_id', $doc_id);
+            // Debugging: Check available education IDs
 
+            // Find the index where `education_id` matches inside `data`
+            $index = collect($documents)->search(fn($document) => isset($document['doc_id']) && (int) $document['doc_id'] === $doc_id);
 
-            if (!$documentToDelete) {
-                return response()->json(['status' => false, 'message' => 'Document ID not found.'], 404);
+            if ($index === false) {
+                return response()->json([
+                    'status' => false,
+                    'message' => "Education ID $doc_id not found.",
+                    'available_doc_ids' => collect($documents)->pluck('doc_id')->toArray()
+                ], 404);
             }
 
-            // Delete the file from storage
-            $filePath = $documentToDelete['file']; // The path of the file in the 'document' field
-            if (Storage::exists('public/' . $filePath)) {
-                // If the file exists, delete it
-                Storage::delete('public/' . $filePath);
-            }
+            // Remove the education record
+            unset($documents[$index]);
 
-            // Remove the document from the documents array
-            $updatedDocuments = collect($documents)->reject(function ($item) use ($doc_id) {
-                return $item['doc_id'] == $doc_id;
-            })->values()->all();
+            // Re-index the array (to avoid missing index numbers)
+            $documents = array_values($documents);
 
-
-            // Re-encode the documents array to JSON and save it back to the database
-            $userDocument->documents = json_encode($updatedDocuments);
+            // Save updated educations
+            $userDocument->documents = json_encode($documents, JSON_PRETTY_PRINT);
             $userDocument->save();
-
 
             return response()->json([
                 'status' => true,
@@ -427,6 +436,7 @@ class JobSeekerProfileController extends Controller
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
+        
     }
 
     public function get_document()
@@ -436,13 +446,32 @@ class JobSeekerProfileController extends Controller
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $userDocument = JobSeekerEducationDetails::select('documents')->where('user_id', $auth->id)->first();
+        $userDocument = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
+
+    if (!$userDocument || !$userDocument->documents) {
+        return response()->json([
+            'status' => true,
+            'message' => 'No documents found',
+            'data' => []
+        ], 200);
+    }
+
+    // Decode documents JSON
+    $documents = json_decode($userDocument->documents, true);
+
+    // Append full file path
+    foreach ($documents as &$doc) {
+        if (!empty($doc['file'])) {
+           
+            $doc['file'] = env('APP_URL') . Storage::url('app/public/' .$doc['file']);
+    }
         return response()->json([
             'status' => true,
             'message' => 'Document List',
-            'data' => $userDocument
+            'data' => $documents
         ], 200);
     }
+}
 
     public function add_professional_exp(Request $request)
     {
@@ -2073,9 +2102,9 @@ class JobSeekerProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'summary' => 'required',
             'skills' => 'required|array',
-            'extraCurricular' => 'array',
-            'achievements' => 'array',
-            'softSkills' => 'array'
+            'extra_curricular' => 'array',
+            'achievement' => 'array',
+            'soft_skills' => 'array'
 
         ], [
             'summary.required' => 'Summary is required.',
@@ -2091,24 +2120,24 @@ class JobSeekerProfileController extends Controller
             ], 422);
         }
 
-        $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
+           $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
         if ($other_details) {
             $other_details->summary = $request->summary;
             $other_details->skills = $request->skills;
-            $other_details->achievement = $request->achievements;
-            $other_details->extra_curricular = $request->extraCurricular;
-            $other_details->soft_skills = $request->softSkills;
+            $other_details->achievement = $request->achievement;
+            $other_details->extra_curricular = $request->extra_curricular;
+            $other_details->soft_skills = $request->soft_skills;
             $other_details->save();
             return response()->json(['status' => true, 'message' => 'Other Details Added']);
         } else {
             $other_details = new JobSeekerProfessionalDetails();
             $other_details->user_id = $auth->id;
             $other_details->bash_id = Str::uuid();
-            $other_details->summary = $request->summary;
+          $other_details->summary = $request->summary;
             $other_details->skills = $request->skills;
-            $other_details->achievement = $request->achievements;
-            $other_details->extra_curricular = $request->extraCurricular;
-            $other_details->soft_skills = $request->softSkills;
+            $other_details->achievement = $request->achievement;
+            $other_details->extra_curricular = $request->extra_curricular;
+            $other_details->soft_skills = $request->soft_skills;
             $other_details->save();
             return response()->json(['status' => true, 'message' => 'Other Details Added']);
         }
@@ -2296,10 +2325,19 @@ class JobSeekerProfileController extends Controller
 
             ->first();
         $knownLanguages = json_decode($personal_data->language_known, true);
-
+     
+        if ($personal_data) {
+            // Modify the company logo to include the full URL if it exists
+            if ($personal_data->profile_picture) {
+                $profile_picture = env('APP_URL') . Storage::url('app/public/' . $personal_data->profile_picture);
+            } else {
+                // If no logo exists, set it to null or a default image URL
+                $profile_picture = null; // Replace with a default image URL if needed
+            }
+        }
         $responseData = [
             'personalInformation' => [
-                'profilePicture' => $personal_data->profile_picture, // Assuming this field exists
+                'profilePicture' => $profile_picture, // Assuming this field exists
                 'firstName' => $personal_data->first_name,
                 'middleName' => $personal_data->middle_name,
                 'lastName' => $personal_data->last_name,
@@ -2337,9 +2375,9 @@ class JobSeekerProfileController extends Controller
             'otherDetails' => [
                 'summary' => $personal_data->summary,
                 'skills' => json_decode($personal_data->skills),
-                'achievement' => $personal_data->achievement,
-                'extra_curricular' => $personal_data->extra_curricular,
-                'soft_skills' => $personal_data->soft_skills
+                'achievement' => json_decode($personal_data->achievement),
+                'extra_curricular' => json_decode($personal_data->extra_curricular),
+                'soft_skills' => json_decode($personal_data->soft_skills)
             ],
             'educationDetails' => json_decode($personal_data->educations),
             'internshipDetails' => json_decode($personal_data->internship),
@@ -2435,5 +2473,49 @@ class JobSeekerProfileController extends Controller
             'message' => 'View Resume.',
             'data' => $resume
         ]);
+    }
+
+    public function open_to_work(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'open_to_work' => 'required', 
+        ], [
+            'open_to_work.required' => 'Open to Work status is required.',  
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $user = User::where('id', $auth->id)->first();
+        if($user)
+        {
+            $user->open_to_work = $request->open_to_work;
+            $user->save();
+            return response()->json([
+                "status" => true,
+                "message" => "Open to Work status Changed.",
+                
+            ], 200);
+        }else{
+            return response()->json([
+                "status" => false,
+                "message" => "User not found.",
+                
+            ]);
+        }
+
     }
 }

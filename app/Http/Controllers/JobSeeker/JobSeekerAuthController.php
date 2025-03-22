@@ -174,4 +174,56 @@ class JobSeekerAuthController extends Controller
             'data' => $user,
         ], 200);
     }
+
+    public function change_password(Request $request)
+    {
+        $user = JWTAuth::user();
+
+        // Check if user is null (if token is invalid or expired)
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required', 
+            'old_password'=>'required',
+            'new_password'=>'required',
+        ], [
+            'email.required' => 'Email is required.',  
+            'old_password.required'=>'Old Password is required.',
+            'new_password.required'=>'New Password is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $user = User::where('email', $request->email)->where('active','1')->first();
+        if($request->old_password==$request->new_password)
+        {
+         return response()->json([
+             'status'=>false,
+             'message'=>'Password should be Different.'
+         ]);
+        }else{
+        
+         if(!empty($user))
+         {
+           
+             $user->password = bcrypt($request->new_password); // Your custom way of hashing or processing
+             $user->save();
+             return response()->json(['status' => true, 'message' => 'Password updated.'], 200);
+          
+ 
+         }else{
+            return response()->json(['status' => true, 'message' => 'Email not found.'], 200);
+          
+         }
+        }
+    }
 }
