@@ -45,7 +45,8 @@ class AllDataSeeder extends Seeder
         $superAdminRole = SuperAdminRole::firstOrCreate([
             'role' => 'super_admin',
             'bash_id'=>Str::uuid(),
-            'parent_id' => 0,  // Root level for SuperAdmin
+            'parent_id' => 0,  // Root level for 
+            'status'=>'Active',
             'active' => 1,
         ]);
 
@@ -54,6 +55,7 @@ class AllDataSeeder extends Seeder
             'role' => 'recruiter',
             'bash_id'=>Str::uuid(),
             'parent_id' => 0,  // Root level for Recruiter
+            'status'=>'Active',
             'active' => 1,
         ]);
 
@@ -81,6 +83,7 @@ class AllDataSeeder extends Seeder
             'role' => 'HR-Admin',
             'bash_id'=>Str::uuid(),
             'parent_id' => $recruiterRole->id, // Set recruiter role as parent
+            'status'=>'Active',
             'active' => 1,
         ]);
 
@@ -88,6 +91,7 @@ class AllDataSeeder extends Seeder
             'role' => 'Manager',
             'bash_id'=>Str::uuid(),
             'parent_id' => $recruiterRole->id, // Set recruiter role as parent
+            'status'=>'Active',
             'active' => 1,
         ]);
 

@@ -14,6 +14,8 @@ class RecruiterRole extends Model
         'bash_id', 
         'role', 
         'parent_id',
+        'status',
+        'added_by',
         'active'
     ];
 }

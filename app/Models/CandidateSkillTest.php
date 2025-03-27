@@ -5,17 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SuperAdminRole extends Model
+class CandidateSkillTest extends Model
 {
     use HasFactory;
-    protected $table = 'superadmin_roles';
+    protected $table = 'candidate_skill_tests';
     protected $fillable = [
         'id', 
         'bash_id', 
-        'role', 
-        'parent_id',
-        'status',
-        'added_by',
-        'active'
+        'jobseeker_id', 
+        'skill',
+        'score',
+        'total',
+        
     ];
 }

@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('role');
             $table->integer('parent_id');
             $table->integer('active');
+            $table->string('status')->nullable();
             $table->integer('added_by')->nullable();
             $table->timestamps();
         });

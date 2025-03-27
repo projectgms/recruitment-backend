@@ -2325,7 +2325,12 @@ class JobSeekerProfileController extends Controller
 
             ->first();
         $knownLanguages = json_decode($personal_data->language_known, true);
-     
+        if($personal_data->open_to_work=="0")
+        {
+            $open_to_work=false;
+        }else{
+               $open_to_work=true;
+        }
         if ($personal_data) {
             // Modify the company logo to include the full URL if it exists
             if ($personal_data->profile_picture) {
@@ -2360,6 +2365,7 @@ class JobSeekerProfileController extends Controller
                 'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
                 'totalExpYear' => $personal_data->total_year_exp,
                 'totalExpMonth' => $personal_data->total_month_exp,
+                'open_to_work'=>$open_to_work,
             ],
             'certificationDetails' => json_decode($personal_data->certifications),
             'contactDetails' => [
@@ -2474,6 +2480,68 @@ class JobSeekerProfileController extends Controller
             'data' => $resume
         ]);
     }
+    public function delete_generate_resume(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+           
+
+        ], [
+            'id.required' => 'Id is required.',
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $delete = GenerateResume::where('id', $request->id)
+     
+        ->where('user_id', $auth->id)
+        ->first();
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+
+    // Check if the document exists
+    if (!$delete) {
+        return response()->json([
+            'status' => false,
+            'message' => 'not found'
+        ], 404);
+    }
+   
+    // Get the document image path (assuming the column stores the relative path)
+    $imagePath = 'public/' . $delete->resume;
+
+    // Check if the image exists in storage and delete it
+    if (Storage::exists($imagePath)) {
+    
+        if ($disk == 'local') {
+            // Delete from local disk
+            Storage::disk('public')->delete($imagePath);
+        } elseif ($disk == 's3') {
+            // Delete from S3 disk
+            Storage::disk('s3')->delete( $imagePath);
+        }
+    }
+
+    // Delete the document record from the database
+    $delete->delete();
+        return response()->json([
+           'status'=>true,
+           'message'=>'resume deleted.'
+       ]);
+    }
 
     public function open_to_work(Request $request)
     {
@@ -2502,7 +2570,14 @@ class JobSeekerProfileController extends Controller
         $user = User::where('id', $auth->id)->first();
         if($user)
         {
-            $user->open_to_work = $request->open_to_work;
+            if( $request->open_to_work==true)
+            {
+                $open_to_work=1;
+                
+            }else{
+                 $open_to_work=0;
+            }
+            $user->open_to_work = $open_to_work;
             $user->save();
             return response()->json([
                 "status" => true,
@@ -2517,5 +2592,31 @@ class JobSeekerProfileController extends Controller
             ]);
         }
 
+    }
+
+    public function get_open_to_work()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $user = User::select('open_to_work')->where('id', $auth->id)->first();
+        if( $user->open_to_work==1)
+            {
+                $open_to_work=true;
+                
+            }else{
+                $open_to_work=false;
+            }
+        return response()->json([
+            "status" => true,
+            "message" => "Open to Work Status.",
+            'data'=>$open_to_work
+            
+        ]);
     }
 }

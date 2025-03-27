@@ -9,11 +9,13 @@ use App\Http\Controllers\Recruiter\JobPostController;
 use App\Http\Controllers\Recruiter\RecruiterAuthController;
 use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Http\Controllers\Recruiter\RecruiterCompanyController;
+use App\Http\Controllers\Recruiter\CandidateController;
+use App\Http\Controllers\Recruiter\RolePermissionController;
 
 //Admin
 use App\Http\Controllers\Admin\AdminAuthController;
-use App\Http\Controllers\Recruiter\CandidateController;
-use App\Http\Controllers\Recruiter\RolePermissionController;
+use App\Http\Controllers\Admin\AdminUserController;
+
 use App\Models\RolePermission;
 
 Route::get('/login', function () {
@@ -70,6 +72,20 @@ Route::prefix('v1')->group(function () {
 
         //Admin Routes
         Route::get('admin/profile', [AdminAuthController::class, 'profile']);
+        Route::get('admin/get_roles',[AdminUserController::class,'get_roles']);
+        Route::post('admin/add_roles',[AdminUserController::class,'add_roles']);
+        Route::post('admin/update_action',[AdminUserController::class,'update_action']);
+        Route::post('admin/delete_role',[AdminUserController::class,'delete_role']);
+
+        Route::post('admin/add_role_permission',[AdminUserController::class,'add_role_permission']);
+        Route::get('admin/view_role_permission',[AdminUserController::class,'view_role_permission']);
+        Route::post('admin/update_role_permission',[AdminUserController::class,'update_role_permission']);
+        Route::post('admin/delete_role_permission',[AdminUserController::class,'delete_role_permission']);
+
+        Route::post('admin/add_user', [AdminUserController::class, 'add_user']);
+        Route::get('admin/view_user', [AdminUserController::class, 'view_user']);
+        Route::post('admin/update_user', [AdminUserController::class, 'update_user']);
+        Route::post('admin/delete_user', [AdminUserController::class, 'delete_user']);
 
         //Admin and Recruiter Common routes
         

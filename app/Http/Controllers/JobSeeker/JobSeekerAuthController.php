@@ -219,7 +219,7 @@ class JobSeekerAuthController extends Controller
              $user->save();
              return response()->json(['status' => true, 'message' => 'Password updated.'], 200);
           
- 
+                                                                                                                                                                                  
          }else{
             return response()->json(['status' => true, 'message' => 'Email not found.'], 200);
           

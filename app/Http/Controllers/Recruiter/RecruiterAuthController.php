@@ -52,7 +52,7 @@ class RecruiterAuthController extends Controller
 
             // Check if the user is active
             if ($user->active == "1") {
-                $check_role=RecruiterRole::select('id','role')->where('id',$user->role_id)->where('role',$user->role)->first();
+                $check_role=RecruiterRole::select('id','role')->where('id',$user->role_id)->where('role',$user->role)->where('active','1')->first();
                 if($check_role)
                 {
 

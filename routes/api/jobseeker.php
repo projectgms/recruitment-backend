@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\JobSeeker\CandidateSkillController;
 use App\Http\Controllers\JobSeeker\JobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,8 @@ use App\Http\Controllers\JobSeeker\JobSeekerAuthController;
 use App\Http\Controllers\JobSeeker\JobSeekerController;
 use App\Http\Controllers\JobSeeker\JobSeekerProfileController;
 use App\Http\Controllers\Recruiter\RecruiterController;
+use App\Models\CandidateSkillTest;
+
 // Job Seeker API routes
     Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
     Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);
@@ -67,19 +70,24 @@ use App\Http\Controllers\Recruiter\RecruiterController;
        Route::post('jobseeker/profile_other_details',[JobSeekerProfileController::class,'profile_other_details']);
        Route::get('jobseeker/get_profile_other_details',[JobSeekerProfileController::class,'get_profile_other_details']);
        Route::post('jobseeker/open_to_work',[JobSeekerProfileController::class,'open_to_work']);
+       Route::get('jobseeker/get_open_to_work',[JobSeekerProfileController::class,'get_open_to_work']);
 
        Route::get('jobseeker/check_profile_complete',[JobSeekerProfileController::class,'check_profile_complete']);
 
        Route::get('jobseeker/master_resume_json',[JobSeekerProfileController::class,'master_resume_json']);
        Route::post('jobseeker/generate_resume',[JobSeekerProfileController::class,'generate_resume']);
        Route::get('jobseeker/view_generate_resume',[JobSeekerProfileController::class,'view_generate_resume']);
-     
+       Route::post('jobseeker/delete_generate_resume',[JobSeekerProfileController::class,'delete_generate_resume']);
        //Job
        Route::post('jobseeker/job_list',[JobController::class,'job_list']);
        Route::post('jobseeker/job_list_filter',[JobController::class,'job_list_filter']);
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
 
+       ///Skill Test
+       Route::get('jobseeker/get_candidate_skills',[CandidateSkillController::class,'get_candidate_skills']);
+       Route::post('jobseeker/candidate_skill_test',[CandidateSkillController::class,'candidate_skill_test']);
+       Route::post('jobseeker/candidate_skill_test_que',[CandidateSkillController::class,'candidate_skill_test_que']);
 
 
     });

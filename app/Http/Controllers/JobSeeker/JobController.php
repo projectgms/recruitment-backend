@@ -8,13 +8,11 @@ use App\Models\JobSeekerProfessionalDetails;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use App\Models\jobs;
+use App\Models\Jobs;
 use App\Models\JobSeekerContactDetails;
 use Illuminate\Support\Facades\Storage;
 
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
-
-
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -63,10 +61,12 @@ class JobController extends Controller
             ->where(function ($query) use ($jobSeekerSkills) {
                 // Loop each skill for an OR condition (any match)
                 foreach ($jobSeekerSkills as $skill) {
-                    // Convert the skill to lowercase for case-insensitive
-                    $lowerSkill = strtolower($skill);
-                    // orWhereRaw with LIKE for partial match
-                    $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $lowerSkill . '%']);
+                    $words = preg_split('/[\s,]+/', strtolower($skill));
+                    foreach ($words as $word) {
+                        if (!empty($word)) {
+                            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
                 }
             })
             ->get();
@@ -77,6 +77,8 @@ class JobController extends Controller
 
                 $job->company_logo =  env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
             }
+            $job->job_locations = json_decode($job->job_locations, true);
+        
             return $job;
         });
         return response()->json([
@@ -106,7 +108,7 @@ class JobController extends Controller
 
         // 2) Build the base query for jobs
         $jobsQuery = Jobs::select(
-            'jobs.id',
+          'jobs.id',
             'jobs.bash_id',
             'jobs.job_title',
             'jobs.job_type',
@@ -115,9 +117,14 @@ class JobController extends Controller
             'jobs.job_description',
             'jobs.is_hot_job',
             'jobs.location as job_locations',
+            'jobs.responsibilities',
+            'jobs.skills_required',
+            'jobs.industry',
+            'jobs.contact_email',
             'companies.company_logo',
             'companies.name as company_name',
-            'companies.locations as company_locations'
+            'companies.locations as company_locations',
+              'companies.company_description'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
             ->where('jobs.status', 'Active');
@@ -125,8 +132,13 @@ class JobController extends Controller
         // 3) Add skill matching (case-insensitive) for any skill
         $jobsQuery->where(function ($query) use ($jobSeekerSkills) {
             foreach ($jobSeekerSkills as $skill) {
-                $lowerSkill = strtolower($skill);
-                $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $lowerSkill . '%']);
+                  $words = preg_split('/[\s,]+/', strtolower($skill));
+                    foreach ($words as $word) {
+                        if (!empty($word)) {
+                            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+              
             }
         });
 
@@ -178,12 +190,17 @@ class JobController extends Controller
         // 5) Get the final list of jobs
         $jobs = $jobsQuery->get();
 
-        $jobs->transform(function ($job) {
-            if ($job->company_logo) {
+        $jobs->transform(function ($jobs) {
+            if ($jobs->company_logo) {
                 // Adjust if your 'company_logo' path is stored differently
-                $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
+                $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
             }
-            return $job;
+               $jobs->skills_required = json_decode($jobs->skills_required, true);
+                $jobs->industry = json_decode($jobs->industry, true);
+                $jobs->company_locations = json_decode($jobs->company_locations, true);
+                $jobs->job_locations = json_decode($jobs->job_locations, true);
+        
+            return $jobs;
         });
 
         return response()->json([
@@ -231,7 +248,8 @@ class JobController extends Controller
             'jobs.contact_email',
             'companies.company_logo',
             'companies.name as company_name',
-            'companies.locations as company_locations'
+            'companies.locations as company_locations',
+              'companies.company_description'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
             ->where('jobs.status', 'Active')
@@ -246,7 +264,11 @@ class JobController extends Controller
                     // If no logo exists, set it to null or a default image URL
                     $jobs->company_logo = null; // Replace with a default image URL if needed
                 }
-            
+                $jobs->skills_required = json_decode($jobs->skills_required, true);
+                $jobs->industry = json_decode($jobs->industry, true);
+                $jobs->company_locations = json_decode($jobs->company_locations, true);
+                $jobs->job_locations = json_decode($jobs->job_locations, true);
+        
               
             }
 
@@ -310,8 +332,12 @@ class JobController extends Controller
     // 4) Add skill matching (case-insensitive)
     $jobsQuery->where(function ($query) use ($jobSeekerSkills) {
         foreach ($jobSeekerSkills as $skill) {
-            $lowerSkill = strtolower($skill);
-            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $lowerSkill . '%']);
+            $words = preg_split('/[\s,]+/', strtolower($skill));
+                    foreach ($words as $word) {
+                        if (!empty($word)) {
+                            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
         }
     });
     

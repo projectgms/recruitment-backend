@@ -10,7 +10,7 @@ use App\Models\JobSeekerProfessionalDetails;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use App\Models\jobs;
+use App\Models\Jobs;
 use Illuminate\Support\Str;
 class CandidateController extends Controller
 {
@@ -52,12 +52,13 @@ class CandidateController extends Controller
         'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
         'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
         'jobseeker_professional_details.experience','jobseeker_professional_details.summary','jobseeker_professional_details.skills','jobseeker_professional_details.achievement','jobseeker_professional_details.extra_curricular','jobseeker_professional_details.projects','jobseeker_professional_details.internship')
-        ->join('jobs','jobs.id','=','job_applications.job_id')
-        ->join('users','users.id','=','job_applications.job_seeker_id')
-        ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->join('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
-        ->join('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
-       
+        ->leftJoin('jobs','jobs.id','=','job_applications.job_id')
+        ->leftJoin('users','users.id','=','job_applications.job_seeker_id')
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
+       ->where('jobs.id', $request->job_id)
+              ->where('jobs.bash_id', $request->bash_id)
         ->get();
         $job_candidate->transform(function ($candidate) {
             $candidate->certifications = json_decode($candidate->certifications, true);
@@ -120,6 +121,7 @@ class CandidateController extends Controller
         }
         $get_job_skills = Jobs::select('skills_required')
             ->where('id', $request->job_id)
+              ->where('bash_id', $request->bash_id)
             ->first();
              // Convert the skills to an array (either JSON or comma-separated)
         $jobSkills = json_decode($get_job_skills->skills_required, true);
@@ -131,9 +133,9 @@ class CandidateController extends Controller
         'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
         'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
         'jobseeker_professional_details.experience','jobseeker_professional_details.summary','jobseeker_professional_details.skills','jobseeker_professional_details.achievement','jobseeker_professional_details.extra_curricular','jobseeker_professional_details.projects','jobseeker_professional_details.internship')
-        ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->join('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
-        ->join('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details','users.id','=','jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details','users.id','=','jobseeker_professional_details.user_id')
        ->where('users.open_to_work','=','1')
        ->where('users.active','=','1')
        ->whereNotIn('users.id', function ($query) use ($request) {
@@ -144,8 +146,13 @@ class CandidateController extends Controller
         // 3) Add skill matching (case-insensitive) for any skill
         $job_candidate->where(function ($query) use ($jobSkills) {
             foreach ($jobSkills as $skill) {
-                $lowerSkill = strtolower($skill);
-                $query->orWhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ['%' . $lowerSkill . '%']);
+                 $words = preg_split('/[\s,]+/', strtolower($skill));
+                    foreach ($words as $word) {
+                        if (!empty($word)) {
+                            $query->orWhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+             
             }
         });
         $job_candidate = $job_candidate->get();

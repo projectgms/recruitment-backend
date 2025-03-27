@@ -44,6 +44,7 @@ class JobPostController extends Controller
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
+            'round'=>'required',
             'experience_required' => 'required',
             'responsibilities' => 'required'
 
@@ -57,12 +58,13 @@ class JobPostController extends Controller
             'job_description.required' => 'Job Description is required.',
             'skills_required.required' => 'Skill is required.',
             'status.required' => 'Status is required.',
-            'salary_range' => 'Salary is required.',
+            'salary_range.required' => 'Salary is required.',
             'expiration_date' => 'Expiration Date is required.',
             'expiration_time' => 'Expiration Time is required.',
-            'job_type' => 'Job Type is required.',
+            'job_type.required' => 'Job Type is required.',
+            'round.required'=>'Round isrequired',
             'experience_required' => 'experience is required.',
-            'responsibilities' => 'Responsibilities is required.'
+            'responsibilities.required' => 'Responsibilities is required.'
 
         ]);
         if ($validator->fails()) {
@@ -84,6 +86,7 @@ class JobPostController extends Controller
             $jobs->job_description = $request->job_description;
             $jobs->job_type = $request->job_type;
             $jobs->location = json_encode($request->location);
+             $jobs->round = json_encode($request->round);
 
             $jobs->contact_email = $request->contact_email;
             $jobs->salary_range = $request->salary_range;
@@ -120,11 +123,8 @@ class JobPostController extends Controller
 
         $validator = Validator::make($request->all(), [
             'company_id'=>'required',
-          
-
         ], [
             'company_id.required' => 'Company Id is required.',
-          
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -196,6 +196,7 @@ class JobPostController extends Controller
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
+            'round'=>'required', 
             'experience_required' => 'required',
             'responsibilities' => 'required'
 
@@ -210,12 +211,13 @@ class JobPostController extends Controller
             'job_description.required' => 'Job Description is required.',
             'skills_required.required' => 'Skill is required.',
             'status.required' => 'Status is required.',
-            'salary_range' => 'Salary is required.',
+            'salary_range.required' => 'Salary is required.',
             'expiration_date' => 'Expiration Date is required.',
             'expiration_time' => 'Expiration Time is required.',
-            'job_type' => 'Job Type is required.',
-            'experience_required' => 'experience is required.',
-            'responsibilities' => 'Responsibilities is required.'
+            'job_type.required' => 'Job Type is required.',
+            'experience_required.required' => 'experience is required.',
+            'responsibilities' => 'Responsibilities is required.',
+            'round.required'=>'Round is required.'
 
         ]);
         if ($validator->fails()) {
@@ -242,7 +244,7 @@ class JobPostController extends Controller
             $jobs->skills_required = json_encode($request->skills_required);
 
             $jobs->industry = json_encode($request->industry);
-            $jobs->industry = json_encode($request->round);
+            $jobs->round = json_encode($request->round);
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
             $jobs->is_hot_job = $request->is_hot_job;

@@ -11,15 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        
-        Schema::create('recruiter_roles', function (Blueprint $table) {
+        Schema::create('candidate_skill_tests', function (Blueprint $table) {
             $table->id();
             $table->string('bash_id')->unique();
-            $table->string('role');
-            $table->integer('parent_id');
-            $table->integer('active');
-            $table->string('status')->nullable();
-            $table->integer('added_by')->nullable();
+            $table->integer('jobseeker_id');
+            $table->string('skill');
+            $table->integer('score');
+            $table->integer('total');
+            
             $table->timestamps();
         });
     }
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('recruiter_roles');
+        Schema::dropIfExists('candidate_skill_tests');
     }
 };
