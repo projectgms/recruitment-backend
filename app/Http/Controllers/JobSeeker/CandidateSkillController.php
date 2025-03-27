@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\JobSeeker;
 
 use App\Http\Controllers\Controller;
+use App\Models\CandidateSkillTest;
 use Illuminate\Http\Request;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Str;
@@ -160,5 +161,59 @@ class CandidateSkillController extends Controller
             return response()->json(['status'=>false,'message'=>'Skill not match.']);
 
         }
+    }
+
+    public function submit_candidate_skill_test(Request $request)
+    {
+        $auth = JWTAuth::user();
+      
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $validator = Validator::make($request->all(), [
+            'skill' => 'required',
+            'score'=>'required',
+            'total'=>'required'
+          
+        ], [
+            'skill.required' => 'Skill is required.',
+            'score.required'=>'Score is required.',
+            'total.required'=>'Total Marks is required.'
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $check_test= CandidateSkillTest::where('jobseeker_id', '=', $auth->id)->where('skill',$request->skill)->count();
+        if ($check_test == 0) {
+
+            $test = new CandidateSkillTest();
+            $test->bash_id = Str::uuid();
+            $test->jobseeker_id = $auth->id;
+            $test->skill = $request->skill;
+            $test->score = $request->score;
+            $test->total = $request->total;
+          
+
+            $test->save();
+            return response()->json(['status' => true, 'message' => 'Test Submited.'], 200);
+        } else {
+
+            $test= CandidateSkillTest::where('jobseeker_id', '=', $auth->id)->where('skill',$request->skill)->first();
+            $test->skill = $request->skill;
+            $test->score = $request->score;
+            $test->total = $request->total;
+            $test->save();
+            return response()->json(['status' => true, 'message' => 'Retest Submitted.'], 200);
+        }
+
     }
 }

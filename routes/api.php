@@ -79,6 +79,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('admin/add_role_permission',[AdminUserController::class,'add_role_permission']);
         Route::get('admin/view_role_permission',[AdminUserController::class,'view_role_permission']);
+        Route::post('admin/view_permission',[AdminUserController::class,'view_permission']);
         Route::post('admin/update_role_permission',[AdminUserController::class,'update_role_permission']);
         Route::post('admin/delete_role_permission',[AdminUserController::class,'delete_role_permission']);
 

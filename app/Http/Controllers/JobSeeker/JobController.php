@@ -11,6 +11,8 @@ use App\Models\User;
 use App\Models\Jobs;
 use App\Models\JobSeekerContactDetails;
 use Illuminate\Support\Facades\Storage;
+use App\Models\GenerateResume;
+use App\Models\InterviewRound;
 
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Hash;
@@ -288,10 +290,12 @@ class JobController extends Controller
 
         $validator = Validator::make($request->all(), [
             'id' => 'required', 
-            'bash_id'=>'required',   
+            'bash_id'=>'required',  
+            'resume_id'=>'required', 
         ], [
             'id.required' => 'Job Id is required.',
-            'bash_id.required'=>'Bash Id is required.'
+            'bash_id.required'=>'Bash Id is required.',
+            'resume_id.required'=>'Resume Id is Required'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -348,22 +352,35 @@ class JobController extends Controller
         if($check_job)
         {
        
-        $apply=JobApplication::find($check_job->id);
-        $apply->bash_id=Str::uuid();
-        $apply->job_id=$request->id;
-        $apply->job_seeker_id=$auth->id;
-        $apply->status='Applied';
-        $apply->save();
+        // $apply=JobApplication::find($check_job->id);
+        // $apply->bash_id=Str::uuid();
+        // $apply->job_id=$request->id;
+        // $apply->job_seeker_id=$auth->id;
+        // $apply->status='Applied';
+        // $apply->save();
         return response()->json([
             'status' => true,
             'message' => 'You already applied this job..'
         ]);
         }else{
+            $resume = GenerateResume::select('resume')->where('user_id', $auth->id)->where('id',$request->resume_id)->first();
+            if ($resume) {
+                // Modify the company logo to include the full URL if it exists
+                if ($resume->resume) {
+                    $resume_url = env('APP_URL') . Storage::url('app/public/' . $resume->resume);
+                } else {
+                    // If no logo exists, set it to null or a default image URL
+                    $resume_url = null; // Replace with a default image URL if needed
+                }
+            }else{
+                $resume_url = null; 
+            }
       $apply=new JobApplication();
       $apply->bash_id=Str::uuid();
       $apply->job_id=$request->id;
       $apply->job_seeker_id=$auth->id;
       $apply->status='Applied';
+      $apply->resume=$resume_url;
       $apply->save();
       return response()->json([
         'status' => true,
@@ -379,5 +396,54 @@ class JobController extends Controller
         ]);
     }
 
+    }
+
+    public function get_job_round(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required', 
+            'bash_id'=>'required',  
+           
+        ], [
+            'id.required' => 'Job Id is required.',
+            'bash_id.required'=>'Bash Id is required.',
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+        $job = Jobs::select('round')
+        ->where('id', $request->id)
+        ->where('bash_id', $request->bash_id)
+        ->first();
+    
+            if ($job && $job->round) {
+                // Decode the JSON array from the `round` column
+                $roundIds = json_decode($job->round, true);
+            
+                // Fetch matching rounds from InterviewRound table
+                $interviewRounds = InterviewRound::select('id as interview_round_id', 'round_name')
+                    ->whereIn('id', $roundIds)
+                    ->get();
+            
+                return response()->json([
+                    'status' => true,
+                    'data' => $interviewRounds
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Job or rounds not found.'
+                ], 404);
+            }
     }
 }

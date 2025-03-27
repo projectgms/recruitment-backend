@@ -14,6 +14,7 @@ class JobApplication extends Model
         'bash_id', 
         'job_id',
         'job_seeker_id',
+        'resume_id',
         'resume',
         'cover_letter',
         'status',

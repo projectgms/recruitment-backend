@@ -83,7 +83,7 @@ class AdminUserController extends Controller
                
             ]); 
         }else{
-            $get_role=SuperAdminRole::select('id')->where('role',$auth->role)->where('active','1')->first();
+            $get_role=SuperAdminRole::select('id')->where('role',$auth->role)->first();
            $roles=new SuperAdminRole();
            $roles->bash_id=Str::uuid();
            $roles->role=$request->role;
@@ -129,12 +129,9 @@ class AdminUserController extends Controller
         }
 
         $roles=SuperAdminRole::find($request->id);
-          if($request->action=='Enable')
-          {
-            $roles->status="Active";
-          }else{
-            $roles->status="Inactive";
-          }
+         
+            $roles->status=$request->action;
+         
         
            $roles->save();
            return response()->json([
@@ -295,7 +292,79 @@ class AdminUserController extends Controller
             'data' => $response
         ]);
     }
+public function view_permission(Request $request)
+{
+    $auth = JWTAuth::user();
 
+    if (!$auth) {
+        return response()->json(
+            [
+                'status' => false,
+                'message' => 'Unauthorized',
+            ],
+            401
+        );
+    }
+   
+    $validator = Validator::make($request->all(), [
+        'role_id' => 'required',
+     
+    ], [
+        'role_id.required' => 'Role Id is required.',
+       
+    ]);
+    if ($validator->fails()) {
+        return response()->json([
+            'status' => false,
+            'message' => $validator->errors(),
+
+        ], 422);
+    }
+    $permissions = RolePermission::join('superadmin_roles', 'role_permissions.role_id', '=', 'superadmin_roles.id')
+        ->select(
+            'superadmin_roles.role',  // Role name
+            'role_permissions.role_id',
+            'role_permissions.company_id',
+            'role_permissions.id',
+            'role_permissions.menu',
+            'role_permissions.view',
+            'role_permissions.add',
+            'role_permissions.edit',
+            'role_permissions.delete'
+        )
+        ->whereNull('role_permissions.company_id') // filter by company_id
+        ->where('superadmin_roles.id', '!=', $request->role_id)
+        ->get();
+          // Group the results by the role name
+
+    // Structure the response with each role and its permissions
+    $response = [];
+    foreach ($permissions as $role => $permissionsList) {
+        // Get role_id and company_id from the first permission in the list
+        $role_id = $permissionsList->first()->role_id;
+     
+        $response[] = [
+            'role' => $role,  // Role name
+            'role_id' => $role_id,  // Role ID
+         
+            'permissions' => $permissionsList->map(function ($permission) {
+                return [
+                    'id' => $permission->id,
+                    'menu' => $permission->menu,
+                    'view' => $permission->view,
+                    'add' => $permission->add,
+                    'edit' => $permission->edit,
+                    'delete' => $permission->delete
+                ];
+            })
+        ];
+    }
+
+    return response()->json([
+        'status' => true,
+        'data' => $response
+    ]);
+}
     public function update_role_permission(Request $request)
     {
         $auth = JWTAuth::user();
@@ -379,11 +448,15 @@ class AdminUserController extends Controller
 
             ], 422);
         }
-        $delete_permission = RolePermission::where('role_id', $request->role_id)->whereNull('company_id')->first();
-        if ($delete_permission) {
-            $delete_permission->delete();
-            return response()->json(['status' => true, 'message' => 'Role Permission deleted.'], 200);
-        }
+        $deleted = RolePermission::where('role_id', $request->role_id)
+        ->whereNull('company_id')
+        ->delete();
+    
+    if ($deleted) {
+        return response()->json(['status' => true, 'message' => 'Role Permissions deleted.'], 200);
+    } else {
+        return response()->json(['status' => false, 'message' => 'No matching Role Permissions found.'], 404);
+    }
     }
 
     public function add_user(Request $request)
@@ -503,7 +576,7 @@ class AdminUserController extends Controller
             'status' => true,
             'message' => 'Users fetched successfully.',
 
-            'users' => $users,
+            'data' => $users,
         ]);
     }
 

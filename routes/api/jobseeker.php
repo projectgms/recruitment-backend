@@ -83,11 +83,13 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/job_list_filter',[JobController::class,'job_list_filter']);
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
+       Route::post('jobseeker/get_job_round',[JobController::class,'get_job_round']);
 
        ///Skill Test
        Route::get('jobseeker/get_candidate_skills',[CandidateSkillController::class,'get_candidate_skills']);
        Route::post('jobseeker/candidate_skill_test',[CandidateSkillController::class,'candidate_skill_test']);
        Route::post('jobseeker/candidate_skill_test_que',[CandidateSkillController::class,'candidate_skill_test_que']);
+       Route::post('jobseeker/submit_candidate_skill_test',[CandidateSkillController::class,'submit_candidate_skill_test']);
 
 
     });

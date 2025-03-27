@@ -99,7 +99,7 @@ class RolePermissionController extends Controller
                 'role_permissions.delete'
             )
             ->where('role_permissions.company_id', $auth->company_id) // filter by company_id
-            ->where('recruiter_roles.role', $auth->role) // filter by company_id
+          //  ->where('recruiter_roles.role', $auth->role) // filter by company_id
             ->get()
             ->groupBy('role');  // Group the results by the role name
 

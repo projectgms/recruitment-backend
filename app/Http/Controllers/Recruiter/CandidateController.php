@@ -15,7 +15,6 @@ use Illuminate\Support\Str;
 class CandidateController extends Controller
 {
     //
-
     public function job_applicant(Request $request)
     {
         $auth = JWTAuth::user();
@@ -47,7 +46,7 @@ class CandidateController extends Controller
             ], 422);
         }
 
-        $job_candidate=JobApplication::select('users.name','users.first_name','users.middle_name','users.last_name','users.email','users.mobile','users.location','users.gender','users.dob','users.marital_status','users.medical_history','users.disability','users.language_known',
+        $job_candidate=JobApplication::select('users.open_to_work','users.name','users.first_name','users.middle_name','users.last_name','users.email','users.mobile','users.location','users.gender','users.dob','users.marital_status','users.medical_history','users.disability','users.language_known',
         'job_applications.status as application_status','job_applications.id','job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company',
         'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
         'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
@@ -69,7 +68,13 @@ class CandidateController extends Controller
             $candidate->skills = json_decode($candidate->skills, true);
             $candidate->projects = json_decode($candidate->projects, true);
             $candidate->internship = json_decode($candidate->internship, true);
-        
+         if( $candidate->open_to_work==1)
+            {
+                $candidate->open_to_work=true;
+                
+            }else{
+                 $candidate->open_to_work=false;
+            }
             return $candidate;
         });
         if($job_candidate)
@@ -128,7 +133,7 @@ class CandidateController extends Controller
         if (!is_array($jobSkills)) {
             $jobSkills = array_map('trim', explode(',', $get_job_skills->skills_required));
         }
-        $job_candidate=User::select('users.id','users.name','users.first_name','users.middle_name','users.last_name','users.email','users.mobile','users.location','users.gender','users.dob','users.marital_status','users.medical_history','users.disability','users.language_known',
+        $job_candidate=User::select('users.open_to_work','users.id','users.name','users.first_name','users.middle_name','users.last_name','users.email','users.mobile','users.location','users.gender','users.dob','users.marital_status','users.medical_history','users.disability','users.language_known',
        'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company',
         'job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp','job_seeker_contact_details.secondary_mobile','job_seeker_contact_details.secondary_email','job_seeker_contact_details.linkedin_url','job_seeker_contact_details.github_url',
         'jobseeker_education_details.certifications','jobseeker_education_details.publications','jobseeker_education_details.trainings','jobseeker_education_details.educations',
@@ -166,7 +171,13 @@ class CandidateController extends Controller
             $candidate->skills = json_decode($candidate->skills, true);
             $candidate->projects = json_decode($candidate->projects, true);
             $candidate->internship = json_decode($candidate->internship, true);
-        
+         if( $candidate->open_to_work==1)
+            {
+                $candidate->open_to_work=true;
+                
+            }else{
+                 $candidate->open_to_work=false;
+            }
             return $candidate;
         });
         return response()->json([

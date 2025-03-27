@@ -135,7 +135,7 @@ class JobPostController extends Controller
         }
 
         $job_post=Jobs::select('jobs.id','jobs.bash_id','jobs.job_title','jobs.job_description','jobs.job_type','jobs.location','jobs.contact_email','jobs.salary_range','jobs.skills_required','jobs.industry','jobs.experience_required','jobs.status','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time','jobs.responsibilities','jobs.created_at','companies.name','jobs.company_id')
-        ->join('companies','companies.id','=','jobs.company_id')->where('jobs.company_id',$request->company_id)->get()
+        ->join('companies','companies.id','=','jobs.company_id')->where('jobs.company_id',$request->company_id)->where('jobs.active','1')->get()
         ->map(function ($job) {
             return [
                 'id' => $job->id,
