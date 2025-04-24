@@ -25,9 +25,14 @@ return new class extends Migration
                 $table->longtext('locations')->nullable();
                 $table->longtext('company_logo')->nullable();
                 $table->longtext('social_profiles')->nullable();
+                 $table->string('facebook_url')->nullable();
+                $table->string('instagram_url')->nullable();
+                $table->string('linkedin_url')->nullable();
+                $table->string('twitter_url')->nullable();
                 $table->string('status');
                 $table->integer('active');
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
         }
     }

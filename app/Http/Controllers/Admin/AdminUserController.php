@@ -9,7 +9,11 @@ use App\Models\User;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\Models\SuperAdminRole;
 use App\Models\RecruiterRole;
+use Illuminate\Support\Facades\Cache;
 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Notifications\Admin\RegisterNotification;
@@ -32,13 +36,20 @@ class AdminUserController extends Controller
                 401
             );
         }
-        if($auth->role=='super_admin')
-        {
-            $roles = SuperAdminRole::select('id', 'role')->where('parent_id', '!=', '0')->get();
-        }else{
-            $roles = SuperAdminRole::select('id', 'role')->where('parent_id', '!=', '0')->where('active','1')->where('added_by','=',$auth->id)->get(); 
-        }
+        // if($auth->role=='super_admin')
+        // {
+          //  $roles = SuperAdminRole::select('id', 'role','status')->where('parent_id', '!=', '0')->where('active','1')->get();
+        // }else{
+        //     $roles = SuperAdminRole::select('id', 'role','status')->where('parent_id', '!=', '0')->where('active','1')->where('added_by','=',$auth->id)->get(); 
+        // }
     
+       
+       
+         $roles =  SuperAdminRole::select('id', 'role', 'status')
+                ->where('parent_id', '!=', 0)
+                ->where('active', 1)
+                ->get();
+      
         return response()->json([
             'status' => true,
             'message' => 'Get Roles.',
@@ -129,7 +140,7 @@ class AdminUserController extends Controller
         }
 
         $roles=SuperAdminRole::find($request->id);
-         
+        
             $roles->status=$request->action;
          
         
@@ -233,66 +244,7 @@ class AdminUserController extends Controller
             return response()->json(['status' => true, 'message' => 'Role Permission Added.'], 200);
         }
     }
-
-    public function view_role_permission()
-    {
-        $auth = JWTAuth::user();
-
-        if (!$auth) {
-            return response()->json(
-                [
-                    'status' => false,
-                    'message' => 'Unauthorized',
-                ],
-                401
-            );
-        }
-        $permissions = RolePermission::join('superadmin_roles', 'role_permissions.role_id', '=', 'superadmin_roles.id')
-            ->select(
-                'superadmin_roles.role',  // Role name
-                'role_permissions.role_id',
-                'role_permissions.company_id',
-                'role_permissions.id',
-                'role_permissions.menu',
-                'role_permissions.view',
-                'role_permissions.add',
-                'role_permissions.edit',
-                'role_permissions.delete'
-            )
-            ->whereNull('role_permissions.company_id') // filter by company_id
-            ->where('superadmin_roles.role', '!=', $auth->role)
-            ->get()
-            ->groupBy('role');  // Group the results by the role name
-
-        // Structure the response with each role and its permissions
-        $response = [];
-        foreach ($permissions as $role => $permissionsList) {
-            // Get role_id and company_id from the first permission in the list
-            $role_id = $permissionsList->first()->role_id;
-         
-            $response[] = [
-                'role' => $role,  // Role name
-                'role_id' => $role_id,  // Role ID
-             
-                'permissions' => $permissionsList->map(function ($permission) {
-                    return [
-                        'id' => $permission->id,
-                        'menu' => $permission->menu,
-                        'view' => $permission->view,
-                        'add' => $permission->add,
-                        'edit' => $permission->edit,
-                        'delete' => $permission->delete
-                    ];
-                })
-            ];
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $response
-        ]);
-    }
-public function view_permission(Request $request)
+    public function view_permission(Request $request)
 {
     $auth = JWTAuth::user();
 
@@ -320,51 +272,110 @@ public function view_permission(Request $request)
 
         ], 422);
     }
-    $permissions = RolePermission::join('superadmin_roles', 'role_permissions.role_id', '=', 'superadmin_roles.id')
-        ->select(
-            'superadmin_roles.role',  // Role name
-            'role_permissions.role_id',
-            'role_permissions.company_id',
-            'role_permissions.id',
-            'role_permissions.menu',
-            'role_permissions.view',
-            'role_permissions.add',
-            'role_permissions.edit',
-            'role_permissions.delete'
-        )
-        ->whereNull('role_permissions.company_id') // filter by company_id
-        ->where('superadmin_roles.id', '!=', $request->role_id)
-        ->get();
-          // Group the results by the role name
+     $permissions = RolePermission::join('superadmin_roles', 'role_permissions.role_id', '=', 'superadmin_roles.id')
+            ->select(
+                'superadmin_roles.role',
+                'role_permissions.role_id',
+                'role_permissions.company_id',
+                'role_permissions.id',
+                'role_permissions.menu',
+                'role_permissions.view',
+                'role_permissions.add',
+                'role_permissions.edit',
+                'role_permissions.delete'
+            )
+            ->whereNull('role_permissions.company_id')
+            ->where('superadmin_roles.id', '=', $request->role_id)
+            ->get()
+            ->groupBy('role');
 
-    // Structure the response with each role and its permissions
-    $response = [];
-    foreach ($permissions as $role => $permissionsList) {
-        // Get role_id and company_id from the first permission in the list
-        $role_id = $permissionsList->first()->role_id;
-     
-        $response[] = [
-            'role' => $role,  // Role name
-            'role_id' => $role_id,  // Role ID
-         
-            'permissions' => $permissionsList->map(function ($permission) {
-                return [
-                    'id' => $permission->id,
-                    'menu' => $permission->menu,
-                    'view' => $permission->view,
-                    'add' => $permission->add,
-                    'edit' => $permission->edit,
-                    'delete' => $permission->delete
-                ];
-            })
-        ];
-    }
+        $response = [];
+        foreach ($permissions as $role => $permissionsList) {
+            $role_id = $permissionsList->first()->role_id;
+            $response[] = [
+                'role' => $role,
+                'role_id' => $role_id,
+                'permissions' => $permissionsList->map(function ($permission) {
+                    return [
+                        'id' => $permission->id,
+                        'menu' => $permission->menu,
+                        'view' => $permission->view,
+                        'add' => $permission->add,
+                        'edit' => $permission->edit,
+                        'delete' => $permission->delete,
+                    ];
+                })
+            ];
+        }
+
+       
 
     return response()->json([
         'status' => true,
         'data' => $response
     ]);
 }
+
+    public function view_role_permission()
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+       
+        $permissions = RolePermission::join('superadmin_roles', 'role_permissions.role_id', '=', 'superadmin_roles.id')
+            ->select(
+                'superadmin_roles.role',
+                'role_permissions.role_id',
+                'role_permissions.company_id',
+                'role_permissions.id',
+                'role_permissions.menu',
+                'role_permissions.view',
+                'role_permissions.add',
+                'role_permissions.edit',
+                'role_permissions.delete'
+            )
+            ->whereNull('role_permissions.company_id')
+            ->where('superadmin_roles.role', '!=', $auth->role)
+            ->get()
+            ->groupBy('role');
+
+        $response = [];
+
+        foreach ($permissions as $role => $permissionsList) {
+            $role_id = $permissionsList->first()->role_id;
+
+            $response[] = [
+                'role' => $role,
+                'role_id' => $role_id,
+                'permissions' => $permissionsList->map(function ($permission) {
+                    return [
+                        'id' => $permission->id,
+                        'menu' => $permission->menu,
+                        'view' => $permission->view,
+                        'add' => $permission->add,
+                        'edit' => $permission->edit,
+                        'delete' => $permission->delete
+                    ];
+                })
+            ];
+        }
+
+      
+
+    return response()->json([
+        'status' => true,
+        'data' => $response
+    ]);
+    }
+
     public function update_role_permission(Request $request)
     {
         $auth = JWTAuth::user();
@@ -449,14 +460,15 @@ public function view_permission(Request $request)
             ], 422);
         }
         $deleted = RolePermission::where('role_id', $request->role_id)
-        ->whereNull('company_id')
-        ->delete();
+    ->whereNull('company_id')
+    ->delete();
+
+if ($deleted) {
+    return response()->json(['status' => true, 'message' => 'Role Permissions deleted.'], 200);
+} else {
+    return response()->json(['status' => false, 'message' => 'No matching Role Permissions found.'], 404);
+}
     
-    if ($deleted) {
-        return response()->json(['status' => true, 'message' => 'Role Permissions deleted.'], 200);
-    } else {
-        return response()->json(['status' => false, 'message' => 'No matching Role Permissions found.'], 404);
-    }
     }
 
     public function add_user(Request $request)
@@ -518,8 +530,9 @@ public function view_permission(Request $request)
         } else {
 
            
-                $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->first();
-           
+                $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->where('active','1')->first();
+           if($roles)
+           {
             $oemuser = new User();
             $oemuser->name = $request->name;
             $oemuser->bash_id = Str::uuid();
@@ -541,43 +554,45 @@ public function view_permission(Request $request)
                 'message' => 'success'
 
             ], 200);
+           }else{
+                 return response()->json([
+                'status' => false,
+                'message' => 'role not found'
+
+            ]);
+           }
         }
     }
 
     public function view_user(Request $request)
     {
-        $auth = JWTAuth::user();
+       $auth = JWTAuth::user();
 
-        if (!$auth) {
-            return response()->json(
-                [
+            if (!$auth) {
+                return response()->json([
                     'status' => false,
                     'message' => 'Unauthorized',
-                ],
-                401
-            );
-        }
-    
-
-            $roles = SuperAdminRole::select('id', 'role')
-                ->where('parent_id', '!=', 0)
-                ->get();
-
-            $roleIds = $roles->pluck('id')->toArray();
-
-            $users = User::whereIn('role_id', $roleIds)
-                ->whereNull('company_id') // If you only want those with no company
-                ->where('added_by','=',$auth->id)
-                ->where('active','=','1')
-                ->get();
-      
-
-        return response()->json([
-            'status' => true,
-            'message' => 'Users fetched successfully.',
-
-            'data' => $users,
-        ]);
+                ], 401);
+            }
+        
+               if ($auth->role === 'super_admin') {
+                $users =User::whereIn('role_id', $roleIds)
+                    ->whereNull('company_id')
+                    ->where('active', '=', '1')
+                    ->get();
+            } else {
+                $users=User::whereIn('role_id', $roleIds)
+                    ->whereNull('company_id')
+                    ->where('added_by', '=', $auth->id)
+                    ->where('active', '=', '1')
+                    ->get();
+            }
+        
+            return response()->json([
+                'status' => true,
+                'message' => 'Users fetched successfully.',
+                'data' => $users,
+            ]);
     }
 
     public function update_user(Request $request)
@@ -636,9 +651,9 @@ public function view_permission(Request $request)
             ]);
         } else {
 
-          
-            $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->first();
-           
+           $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->where('active','1')->first();
+           if($roles)
+           {
             $oemuser = User::find($request->id);
             $oemuser->name = $request->name;
 
@@ -655,6 +670,13 @@ public function view_permission(Request $request)
                 'message' => 'success'
 
             ], 200);
+        }else{
+            return response()->json([
+                'status' => false,
+                'message' => 'role not found'
+
+            ]); 
+        }
         }
     }
 

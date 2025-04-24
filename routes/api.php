@@ -11,7 +11,9 @@ use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Http\Controllers\Recruiter\RecruiterCompanyController;
 use App\Http\Controllers\Recruiter\CandidateController;
 use App\Http\Controllers\Recruiter\RolePermissionController;
+use App\Http\Controllers\Recruiter\RecruiterSubscriptionController;
 
+use App\Http\Controllers\Recruiter\InterviewController;
 //Admin
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -35,6 +37,7 @@ Route::prefix('v1')->group(function () {
     Route::post('admin/login', [AdminAuthController::class, 'login']);
     Route::post('admin/forgot_password', [AdminAuthController::class, 'forgot_password']);
     Route::post('admin/reset_password', [AdminAuthController::class, 'reset_password']);
+    Route::post('email_subscription',[AuthController::class,'email_subscription']);
 
     Route::post('recruiter/login', [RecruiterAuthController::class, 'login']);
     Route::post('recruiter/register', [RecruiterAuthController::class, 'register']);
@@ -45,14 +48,23 @@ Route::prefix('v1')->group(function () {
         
         //Recruiter Routes
         Route::get('recruiter/profile', [RecruiterAuthController::class, 'profile']);
+        Route::post('recruiter/change_password',[RecruiterAuthController::class,'change_password']);
+        Route::post('recruiter/update_first_login',[RecruiterAuthController::class,'update_first_login']);
+
+
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
 
         Route::get('recruiter/get_interview_round', [JobPostController::class, 'get_interview_round']);
+        Route::post('recruiter/check_interview_questions',[JobPostController::class,'check_interview_questions']);
         Route::post('recruiter/add_job_post', [JobPostController::class, 'add_job_post']);
         Route::post('recruiter/view_job_post', [JobPostController::class, 'view_job_post']);
         Route::post('recruiter/update_job_post', [JobPostController::class, 'update_job_post']);
         Route::post('recruiter/delete_job_post', [JobPostController::class, 'delete_job_post']);
+        Route::post('recruiter/get_job_post_count',[JobPostController::class,'get_job_post_count']);
+        Route::post('recruiter/salary_insights',[JobPostController::class,'salary_insights']);
+
+
 
         Route::post('recruiter/add_role_permission', [RolePermissionController::class, 'add_role_permission']);
         Route::get('recruiter/view_role_permission', [RolePermissionController::class, 'view_role_permission']);
@@ -66,7 +78,24 @@ Route::prefix('v1')->group(function () {
         Route::post('delete_user', [RolePermissionController::class, 'delete_user']);
 
         Route::post('job_applicant',[CandidateController::class,'job_applicant']);
+        Route::get('recruiter/recent_application',[CandidateController::class,'recent_application']);
+
+        Route::post('recruiter/candidate_analysis_by_jd',[CandidateController::class,'candidate_analysis_by_jd']);
+
+        
+        Route::post('recruiter/update_filter_job_applicant',[CandidateController::class,'update_filter_job_applicant']);
         Route::post('open_to_work',[CandidateController::class,'open_to_work']);
+        
+         //Job Application Notification
+        Route::post('recruiter/view_job_application_notification',[CandidateController::class,'view_job_application_notification']);
+        Route::post('recruiter/update_job_application_notification',[CandidateController::class,'update_job_application_notification']);
+
+        Route::post('recruiter/get_candidate_interview_status',[InterviewController::class,'get_candidate_interview_status']);
+                Route::post('recruiter/get_job_interview_status',[InterviewController::class,'get_job_interview_status']);
+
+        Route::post('recruiter/update_candidate_interview_status',[InterviewController::class,'update_candidate_interview_status']);
+
+        Route::get('recruiter/get_plans',[RecruiterSubscriptionController::class,'get_plans']);
 
         Route::post('logout', [AuthController::class, 'logout']);
 

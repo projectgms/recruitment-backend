@@ -21,7 +21,8 @@ return new class extends Migration
                 $table->json('publications');
                 $table->json('trainings');
                 $table->json('certifications');
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
         }
     }

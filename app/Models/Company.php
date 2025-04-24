@@ -21,6 +21,10 @@ class Company extends Model
         'locations',
         'company_logo',
         'social_profiles',
+         'facebook_url',
+        'instagram_url',
+        'linkedin_url',
+        'twitter_url',
         'status',
         'active'
     ];

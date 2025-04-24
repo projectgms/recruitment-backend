@@ -13,6 +13,7 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use App\Notifications\RegisterNotification;
+use Illuminate\Support\Facades\Cache;
 
 
 class RolePermissionController extends Controller
@@ -99,7 +100,7 @@ class RolePermissionController extends Controller
                 'role_permissions.delete'
             )
             ->where('role_permissions.company_id', $auth->company_id) // filter by company_id
-          //  ->where('recruiter_roles.role', $auth->role) // filter by company_id
+           ->where('recruiter_roles.role','!=', 'recruiter') // filter by company_id
             ->get()
             ->groupBy('role');  // Group the results by the role name
 
@@ -227,7 +228,7 @@ class RolePermissionController extends Controller
             return response()->json(['status' => true, 'message' => 'Role Permission deleted.'], 200);
         }
     }
-    public function get_roles(Request $request)
+   public function get_roles(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -339,7 +340,7 @@ class RolePermissionController extends Controller
         }
     }
 
-    public function view_user(Request $request)
+     public function view_user(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -362,6 +363,7 @@ class RolePermissionController extends Controller
 
             $users = User::whereIn('role_id', $roleIds)
                 ->where('company_id', $auth->company_id)
+                ->where('active', '1')
                 ->get();
         } else {
 
@@ -373,7 +375,7 @@ class RolePermissionController extends Controller
 
             $users = User::whereIn('role_id', $roleIds)
                 ->whereNull('company_id') // If you only want those with no company
-
+                ->where('active', '1')
                 ->get();
         }
 

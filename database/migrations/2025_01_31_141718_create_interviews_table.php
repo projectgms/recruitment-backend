@@ -14,16 +14,23 @@ return new class extends Migration
         if (!Schema::hasTable('interviews'))
         {
             Schema::create('interviews', function (Blueprint $table) {
-                $table->id();
-                $table->integer('application_id');
+               $table->id();
+                $table->string('bash_id')->unique();
+                $table->integer('job_id');
+                $table->integer('job_application_id');
+                $table->integer('jobseeker_id');
                 $table->integer('recruiter_id');
                 $table->integer('company_id');
+                  $table->integer('round_id');
+                $table->string('score');
+                $table->string('total');
                 $table->dateTime('interview_date');
                 $table->string('interview_mode');
                 $table->text('interview_link');
                 $table->string('status');
                 $table->text('feedback');
-                $table->timestamps();
+                $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
        }
     }

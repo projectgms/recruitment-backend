@@ -7,11 +7,16 @@ use App\Models\GenerateResume;
 use App\Models\JobSeekerContactDetails;
 use App\Models\JobSeekerEducationDetails;
 use App\Models\JobSeekerProfessionalDetails;
+use App\Models\AIAnalysisResume;
 use Illuminate\Http\Request;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Models\Jobs;
+use Illuminate\Support\Facades\Cache;
+
+
 use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Support\Facades\Log;
@@ -36,7 +41,7 @@ class JobSeekerProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'profilePicture' => 'required',
             'firstName' => 'required',
-            'middleName' => 'required',
+            
             'lastName' => 'required',
             'dateOfBirth' => 'required',
             'gender' => 'required',
@@ -52,14 +57,14 @@ class JobSeekerProfileController extends Controller
             'disability' => 'required',
             'knownLanguages' => 'required|array', // Ensure it's an array
             'knownLanguages.*' => 'string',
-            'medicalHistory' => 'required',
-
+         
+ 'work_status' => 'required',
             'totalExpYear' => 'required',
             'totalExpMonth' => 'required',
         ], [
             'profilePicture.required' => 'profilePicture is required.',
             'firstName.required' => 'firstName is required.',
-            'middleName.required' => 'middleName is required.',
+         
             'lastName.required' => 'lastName is required.',
             'dateOfBirth.required' => 'dateOfBirth is required.',
             'gender.required' => 'gender is required.',
@@ -74,8 +79,8 @@ class JobSeekerProfileController extends Controller
             'bloodGroup.required' => 'bloodGroup is required.',
             'disability.required' => 'disability is required.',
             'knownLanguages.required' => 'knownLanguages is required.',
-            'medicalHistory.required' => 'medicalHistory is required.',
-
+         
+'work_status.required'=>'work status required',
             'totalExpYear.required' => 'total year Exp is required',
             'totalExpMonth.required' => 'total month Exp is required',
         ]);
@@ -154,7 +159,7 @@ class JobSeekerProfileController extends Controller
             $contact->zipcode = $request->zipCode;
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
-
+$contact->work_status = $request->work_status;
             $contact->total_year_exp = $request->totalExpYear;
             $contact->total_month_exp = $request->totalExpMonth;
 
@@ -170,6 +175,8 @@ class JobSeekerProfileController extends Controller
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
             $contact->dream_company = $request->dreamCompany;
+            $contact->work_status = $request->work_status;
+
             $contact->total_year_exp = $request->totalExpYear;
             $contact->total_month_exp = $request->totalExpMonth;
             $contact->save();
@@ -188,26 +195,41 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
 
-        $personal_data = User::select('users.*', 'job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
+        $personal_data = User::select('users.*','job_seeker_contact_details.work_status','job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
             ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
             ->where('users.id', $auth->id)
 
             ->first();
-        if ($personal_data) {
-            // Modify the company logo to include the full URL if it exists
+       $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+
+           if($personal_data)
+           {
             if ($personal_data->profile_picture) {
-                $personal_data->profile_picture = env('APP_URL') . Storage::url('app/public/' . $personal_data->profile_picture);
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $personal_data->profile_picture = Storage::disk('s3')->url($personal_data->profile_picture);
+                } else {
+                    // Default to local
+                    $personal_data->profile_picture = env('APP_URL') . Storage::url('app/public/' .$personal_data->profile_picture);
+                }
+              
             } else {
                 // If no logo exists, set it to null or a default image URL
                 $personal_data->profile_picture = null; // Replace with a default image URL if needed
             }
-        }
 
         return response()->json([
             'status' => true,
             'message' => 'Get Personal Information.',
             'data' => $personal_data
         ]);
+           }else{
+               return response()->json([
+            'status' => true,
+            'message' => 'Get Personal Information.',
+            'data' => []
+        ]);
+           }
     }
 
     public function contact_details(Request $request)
@@ -224,14 +246,12 @@ class JobSeekerProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'secondaryPhone' => 'required',
             'otherEmail' => 'required',
-            'linkedInUrl' => 'required',
-            'githubUrl' => 'required',
+           
 
         ], [
             'secondaryPhone.required' => 'Secondary mobile Number is required.',
             'otherEmail.required' => 'Other Email is required.',
-            'linkedInUrl.required' => 'Linkedin Url is required.',
-            'githubUrl.required' => 'Github Url is required.',
+           
 
         ]);
         if ($validator->fails()) {
@@ -465,12 +485,13 @@ class JobSeekerProfileController extends Controller
            
             $doc['file'] = env('APP_URL') . Storage::url('app/public/' .$doc['file']);
     }
+    }
         return response()->json([
             'status' => true,
             'message' => 'Document List',
             'data' => $documents
         ], 200);
-    }
+    
 }
 
     public function add_professional_exp(Request $request)
@@ -507,7 +528,7 @@ class JobSeekerProfileController extends Controller
                 "country" => $experience['country'] ? $experience['country'] : null,
                 "state" => $experience['state'] ? $experience['state'] : null,
                 "ctc" => $experience['ctc'] ? $experience['ctc'] : null,
-                "currentlyWorking" => $experience['currentlyWorking'] == '1' ? 'true' : 'false',
+                "currentlyWorking" => $experience['currentlyWorking'] == '1' ? true : false,
                 "skills" => $experience['skills'] ? $experience['skills'] : null,
                 "from" => $experience['from'] ? $experience['from'] : null,
                 "to" => $experience['to'] ? $experience['to'] : null,
@@ -739,7 +760,7 @@ class JobSeekerProfileController extends Controller
                 "country" => $internship['country'] ? $internship['country'] : null,
                 "state" => $internship['state'] ? $internship['state'] : null,
 
-                "currentlyWorking" => $internship['currentlyWorking'] == '1' ? 'true' : 'false',
+                "currentlyWorking" => $internship['currentlyWorking'] == '1' ? true : false,
                 "skills" => $internship['skills'] ? $internship['skills'] : null,
                 "from" => $internship['from'] ? $internship['from'] : null,
                 "to" => $internship['to'] ? $internship['to'] : null,
@@ -1645,6 +1666,7 @@ class JobSeekerProfileController extends Controller
                 "marksType" => $certification['marksType'] ? $certification['marksType'] : ' ',
                 "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : '0',
                 "max" => $certification['max'] ? $certification['max'] : '0',
+  "certificateLink"=>$certification['certificateLink']?$certification['certificateLink']:' ',
 
                 "skills" => $certification['skills'] ? $certification['skills'] : ' ',
                 "description" => $certification['description'] ? $certification['description'] : ' ',
@@ -2184,6 +2206,7 @@ class JobSeekerProfileController extends Controller
             'job_seeker_contact_details.course',
             'job_seeker_contact_details.primary_specialization',
             'job_seeker_contact_details.dream_company',
+              'job_seeker_contact_details.work_status',
             'job_seeker_contact_details.total_year_exp',
             'job_seeker_contact_details.total_month_exp',
             'job_seeker_contact_details.secondary_mobile',
@@ -2233,6 +2256,7 @@ class JobSeekerProfileController extends Controller
                 'medicalHistory' => $personal_data->medical_history,
                 'disability' => $personal_data->disability,
                 'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
+                  'work_status' => $personal_data->work_status,
                 'totalExpYear' => $personal_data->total_year_exp,
                 'totalExpMonth' => $personal_data->total_month_exp,
             ],
@@ -2278,6 +2302,147 @@ class JobSeekerProfileController extends Controller
         ]);
     
     }
+     public function generate_resume_by_jd(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required',
+            'bash_id' => 'required'
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'bash_id.required' => 'Bash Id is required.',
+
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+         $personal_data = User::select(
+            'users.*',
+          
+            'jobseeker_education_details.certifications',
+           
+            'jobseeker_professional_details.experience',
+            'jobseeker_professional_details.summary',
+            'jobseeker_professional_details.soft_skills',
+            'jobseeker_professional_details.skills',
+            'jobseeker_professional_details.achievement',
+            'jobseeker_professional_details.extra_curricular',
+            'jobseeker_professional_details.projects',
+            'jobseeker_professional_details.internship'
+        )
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+      
+            ->where('users.id', $auth->id)
+
+            ->first();
+        if($personal_data)
+        {
+            
+        $responseData = [
+           
+            'certificationDetails' => json_decode($personal_data->certifications),
+           
+            'professionalDetails' => json_decode($personal_data->experience),
+            'projectDetails' => json_decode($personal_data->projects),
+           
+            'otherDetails' => [
+                'summary' => $personal_data->summary,
+                'skills' => json_decode($personal_data->skills),
+                'achievement' => json_decode($personal_data->achievement),
+                'extra_curricular' => json_decode($personal_data->extra_curricular),
+                'soft_skills' => json_decode($personal_data->soft_skills)
+            ],
+         
+        ];
+        
+         $job = Jobs::select('jobs.job_title','jobs.location','jobs.job_description','jobs.responsibilities','jobs.skills_required','jobs.status','jobs.salary_range','jobs.industry','jobs.job_type','jobs.contact_email','jobs.experience_required','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time')
+        ->where('jobs.id', $request->job_id)
+       
+        ->first();
+       
+       $jd=array("title"=>$job->job_title,
+     
+       "locations"=>$job->location,
+       "description"=>$job->job_description,
+       "responsibilities"=>$job->responsibilities,
+       "skills"=>$job->skills_required,
+       "status"=>$job->status,
+       "salary"=>$job->salary_range,
+       "industries"=>$job->industry,
+       "employmentType"=>$job->job_type,
+       "email"=>$job->contact_email,
+       "experience"=>$job->	experience_required,
+       "hotJob"=>$job->is_hot_job,
+       "expirationDate"=>$job->expiration_date,
+       
+       "expirationTime"=>$job->expiration_time
+       );
+       
+       
+         $ch = curl_init();
+            
+       
+        
+        $jsonData = [
+            'jd' => $jd,
+            'resume' => $responseData
+        ];
+
+       
+            curl_setopt_array($ch, [
+                CURLOPT_URL => 'https://job-fso4.onrender.com/RESUME_GENERATOR',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($jsonData), 
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Content-Type: application/json', // This is CRITICAL
+                ],
+            ]);
+            
+            $response = curl_exec($ch);
+            
+           
+       
+            if (curl_errno($ch)) {
+                 return response()->json([
+                'status' => false,
+                'message' =>curl_error($ch),
+                
+            ]);
+              
+            }
+            
+             curl_close($ch);
+              return response()->json([
+            'status' => true,
+            'message' => 'Generate Resume By Jd.',
+            'data' =>json_decode($response)
+        ]);
+        }else{
+              return response()->json([
+            'status' => false,
+            'message' => 'No data found.',
+            'data' => []
+        ]);
+        }
+    }
     public function master_resume_json()
     {
         $auth = JWTAuth::user();
@@ -2298,6 +2463,7 @@ class JobSeekerProfileController extends Controller
             'job_seeker_contact_details.course',
             'job_seeker_contact_details.primary_specialization',
             'job_seeker_contact_details.dream_company',
+              'job_seeker_contact_details.work_status',
             'job_seeker_contact_details.total_year_exp',
             'job_seeker_contact_details.total_month_exp',
             'job_seeker_contact_details.secondary_mobile',
@@ -2331,14 +2497,21 @@ class JobSeekerProfileController extends Controller
         }else{
                $open_to_work=true;
         }
-        if ($personal_data) {
-            // Modify the company logo to include the full URL if it exists
-            if ($personal_data->profile_picture) {
-                $profile_picture = env('APP_URL') . Storage::url('app/public/' . $personal_data->profile_picture);
+       $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+
+           
+        if ($personal_data->profile_picture) {
+            if ($disk=== 's3') {
+                // For S3, use Storage facade with the 's3' disk
+                $profile_picture = Storage::disk('s3')->url($personal_data->profile_picture);
             } else {
-                // If no logo exists, set it to null or a default image URL
-                $profile_picture = null; // Replace with a default image URL if needed
+                // Default to local
+                $profile_picture = env('APP_URL') . Storage::url('app/public/' .$personal_data->profile_picture);
             }
+          
+        } else {
+            // If no logo exists, set it to null or a default image URL
+            $profile_picture = null; // Replace with a default image URL if needed
         }
         $responseData = [
             'personalInformation' => [
@@ -2363,6 +2536,7 @@ class JobSeekerProfileController extends Controller
                 'medicalHistory' => $personal_data->medical_history,
                 'disability' => $personal_data->disability,
                 'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
+                'work_status' => $personal_data->work_status,
                 'totalExpYear' => $personal_data->total_year_exp,
                 'totalExpMonth' => $personal_data->total_month_exp,
                 'open_to_work'=>$open_to_work,
@@ -2410,11 +2584,14 @@ class JobSeekerProfileController extends Controller
             'resume_name' => 'required',
             'resume' => 'required',
             'resume_json' => 'required',
+            'is_ai_generated'=>'required',
+            'job_id'=>'required',
 
         ], [
             'resume_name.required' => 'Resume Name is required.',
             'resume.required' => 'Resume is required.',
-            'resume_json.required' => 'Resume JSON is required.'
+            'resume_json.required' => 'Resume JSON is required.',
+            'job_id.required'=>'Job Id is required'
 
         ]);
         if ($validator->fails()) {
@@ -2448,6 +2625,8 @@ class JobSeekerProfileController extends Controller
         $resume->bash_id = Str::uuid();
         $resume->resume_name = $request->resume_name;
         $resume->resume_json = $request->resume_json;
+         $resume->job_id = $request->job_id;
+          $resume->is_ai_generated = $request->is_ai_generated;
         $resume->save();
         return response()->json(['status' => true, 'message' => 'Resume Generated.'], 200);
     }
@@ -2462,11 +2641,23 @@ class JobSeekerProfileController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
-        $resume = GenerateResume::select('id', 'resume_name', 'resume', 'resume_json')->where('user_id', $auth->id)->get();
+        $resume = GenerateResume::select('id','bash_id', 'resume_name', 'resume', 'resume_json','is_ai_generated')->where('user_id', $auth->id)->get();
         $resume->transform(function ($resume) {
-            if ($resume->resume) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-                $resume->resume =  env('APP_URL') . Storage::url('app/public/' . $resume->resume);
+           
+            if ($resume->resume) {
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $resume->resume = Storage::disk('s3')->url($resume->resume);
+                } else {
+                    // Default to local
+                    $resume->resume= env('APP_URL') . Storage::url('app/public/' .$resume->resume);
+                }
+              
+            } else {
+                // If no logo exists, set it to null or a default image URL
+                $resume->resume = null; // Replace with a default image URL if needed
             }
             if ($resume->resume_json) {
                 $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
@@ -2475,6 +2666,43 @@ class JobSeekerProfileController extends Controller
             return $resume;
         });
         return response()->json([
+            'status' => true,
+            'message' => 'View Resume.',
+            'data' => $resume
+        ]);
+    }
+    public function get_resume_by_id(Request $request)
+    {
+         $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'id' => 'required',
+           'bash_id'=>'required',
+
+        ], [
+            'id.required' => 'Id is required.',
+            'bash_id.required'=>'Bash_id is required'
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+         $resume = GenerateResume::select('id','bash_id', 'resume_name', 'resume_json')->where('user_id', $auth->id)->where('id',$request->id)->where('bash_id',$request->bash_id)->first();
+          if ($resume->resume_json) {
+                $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
+            }
+            return response()->json([
             'status' => true,
             'message' => 'View Resume.',
             'data' => $resume
@@ -2525,14 +2753,26 @@ class JobSeekerProfileController extends Controller
 
     // Check if the image exists in storage and delete it
     if (Storage::exists($imagePath)) {
-    
-        if ($disk == 'local') {
-            // Delete from local disk
-            Storage::disk('public')->delete($imagePath);
-        } elseif ($disk == 's3') {
-            // Delete from S3 disk
-            Storage::disk('s3')->delete( $imagePath);
+        if($delete)
+        {
+            
+      
+             $ai_delete = AIAnalysisResume::where('resume_generate_id', $request->id)
+         
+            ->where('jobseeker_id', $auth->id)
+            ->delete();
+    //         if($ai_delete)
+    //   {
+    //           $ai_delete->delete();
+    //   }
         }
+        // if ($disk == 'local') {
+        //     // Delete from local disk
+        //     Storage::disk('public')->delete($imagePath);
+        // } elseif ($disk == 's3') {
+        //     // Delete from S3 disk
+        //     Storage::disk('s3')->delete( $imagePath);
+        // }
     }
 
     // Delete the document record from the database

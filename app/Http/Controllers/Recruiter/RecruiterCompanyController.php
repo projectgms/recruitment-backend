@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -13,11 +14,12 @@ use Illuminate\Http\Request;
 class RecruiterCompanyController extends Controller
 {
     //
-    public function company_profile(Request $request)
+  public function company_profile(Request $request)
     {
         $permissions = json_encode($request->attributes->get('permissions'));  // Correct way to access permissions
 
         $auth = JWTAuth::user();
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
         if (!$auth) {
             return response()->json([
@@ -38,14 +40,19 @@ class RecruiterCompanyController extends Controller
                 
             ], 422);
         }
-        $company=Company::select('id','bash_id','name','website','industry','company_size','company_description','locations','company_logo','social_profiles')->where('user_id',$request->user_id)->first();
+        $company=Company::select('id','bash_id','name','website','industry','company_size','company_description','locations','company_logo','social_profiles','facebook_url','linkedin_url','twitter_url','instagram_url')->where('id',$auth->company_id)->first();
         if ($company) {
             // Modify the company logo to include the full URL if it exists
             if ($company->company_logo) {
-                $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $company->company_logo = Storage::disk('s3')->url($company->company_logo);
+                } else {
+                    // Default to local
+                    $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
+                }
             } else {
-                // If no logo exists, set it to null or a default image URL
-                $company->company_logo = null; // Replace with a default image URL if needed
+                $company->company_logo = null; // Or use a default image URL
             }
         
           
@@ -57,6 +64,7 @@ class RecruiterCompanyController extends Controller
         ]);
      
     }
+
 
     public function update_company_profile(Request $request)
     {
@@ -80,6 +88,10 @@ class RecruiterCompanyController extends Controller
             'company_description'=>'required',
             'company_logo'=>'required',
             'social_profiles'=>'',
+            'facebook_url'=>'',
+            'instagram_url'=>'',
+            'linkedin_url'=>'',
+            'twitter_url'=>'',
            
         ], [
             'user_id.required' => 'User Id is required.',
@@ -102,7 +114,7 @@ class RecruiterCompanyController extends Controller
         }
         $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-        $company = Company::where('user_id', $request->user_id)->where('active', '1')->first();
+        $company = Company::where('id', $auth->company_id)->where('active', '1')->first();
         if ($company) 
         {
             if ($request->hasFile("company_logo")) {
@@ -140,6 +152,10 @@ class RecruiterCompanyController extends Controller
             $company->industry = $request->industry;
             $company->locations =$request->locations;
             $company->social_profiles =$request->social_profiles;
+            $company->facebook_url=$request->facebook_url;
+            $company->instagram_url=$request->instagram_url;
+            $company->linkedin_url=$request->linkedin_url;
+            $company->twitter_url=$request->twitter_url;
             $company->save();
             return response()->json(['status' => true, 'message' => 'Company Information Updated.'], 200);
         }else{

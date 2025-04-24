@@ -11,13 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
+         if (!Schema::hasTable('interview_rounds')) {
         Schema::create('interview_rounds', function (Blueprint $table) {
             $table->id();
             $table->string('bash_id')->unique();
             $table->string('round_name');
             $table->integer('active')->default(1);
-            $table->timestamps();
+             $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
+         }
     }
 
     /**

@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+           if (!Schema::hasTable('skill_ass_questions')) {
         Schema::create('skill_ass_questions', function (Blueprint $table) {
             $table->id();
             
@@ -22,8 +23,10 @@ return new class extends Migration
             $table->string('option3');
             $table->string('option4');
             $table->string('correct_answer');
-            $table->timestamps();
+             $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
+           }
     }
 
     /**
