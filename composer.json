@@ -13,7 +13,8 @@
         "laravel/socialite": "^5.17",
         "laravel/tinker": "^2.9",
         "league/flysystem-aws-s3-v3": "^3.29",
-        "php-open-source-saver/jwt-auth": "^2.2"
+        "php-open-source-saver/jwt-auth": "^2.2",
+        "razorpay/razorpay": "^2.9"
     },
     "require-dev": {
         "dipeshsukhia/laravel-country-state-city-data": "^2.0",
