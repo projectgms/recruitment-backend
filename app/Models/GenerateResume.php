@@ -13,9 +13,11 @@ class GenerateResume extends Model
         'id', 
         'bash_id', 
         'user_id',
+        'job_id',
         'resume_name',
         'resume',
         'resume_json',
+            'is_ai_generated',
         'status',
         'active'
     ];

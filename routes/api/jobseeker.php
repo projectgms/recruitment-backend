@@ -1,14 +1,17 @@
 <?php
+use App\Http\Controllers\JobSeeker\AppliedJobController;
 
 use App\Http\Controllers\JobSeeker\CandidateSkillController;
 use App\Http\Controllers\JobSeeker\JobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\API\AuthController;
 
 //JobSeeker
 use App\Http\Controllers\JobSeeker\JobSeekerAuthController;
 use App\Http\Controllers\JobSeeker\JobSeekerController;
 use App\Http\Controllers\JobSeeker\JobSeekerProfileController;
+use App\Http\Controllers\JobSeeker\ResumeController;
 use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Models\CandidateSkillTest;
 
@@ -19,11 +22,14 @@ use App\Models\CandidateSkillTest;
     Route::post('jobseeker/reset_password',[JobSeekerController::class,'reset_password']);
 
     Route::middleware(['auth:api'])->group(function () {
+      Route::post('jobseeker/logout', [AuthController::class, 'logout']);
 
        Route::get('jobseeker/profile', [JobSeekerAuthController::class, 'profile']);
        Route::post('jobseeker/personal_info',[JobSeekerProfileController::class,'personal_info']);
        Route::get('jobseeker/get_personal_info',[JobSeekerProfileController::class,'get_personal_info']);
        Route::post('jobseeker/change_password',[JobSeekerAuthController::class,'change_password']);
+       Route::post('jobseeker/update_first_login',[JobSeekerAuthController::class,'update_first_login']);
+
 
        Route::post('jobseeker/contact_details',[JobSeekerProfileController::class,'contact_details']);
        Route::get('jobseeker/get_contact_details',[JobSeekerProfileController::class,'get_contact_details']);
@@ -77,19 +83,35 @@ use App\Models\CandidateSkillTest;
        Route::get('jobseeker/master_resume_json',[JobSeekerProfileController::class,'master_resume_json']);
        Route::post('jobseeker/generate_resume',[JobSeekerProfileController::class,'generate_resume']);
        Route::get('jobseeker/view_generate_resume',[JobSeekerProfileController::class,'view_generate_resume']);
+       Route::post('jobseeker/get_resume_by_id',[JobSeekerProfileController::class,'get_resume_by_id']);
        Route::post('jobseeker/delete_generate_resume',[JobSeekerProfileController::class,'delete_generate_resume']);
+       Route::post('jobseeker/generate_resume_by_jd',[JobSeekerProfileController::class,'generate_resume_by_jd']);
+
        //Job
        Route::post('jobseeker/job_list',[JobController::class,'job_list']);
        Route::post('jobseeker/job_list_filter',[JobController::class,'job_list_filter']);
+       Route::post('jobseeker/submit_saved_job',[JobController::class,'submit_saved_job']);
+       Route::get('jobseeker/my_saved_job',[JobController::class,'my_saved_job']);
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
        Route::post('jobseeker/get_job_round',[JobController::class,'get_job_round']);
+     Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
+      Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
+
 
        ///Skill Test
        Route::get('jobseeker/get_candidate_skills',[CandidateSkillController::class,'get_candidate_skills']);
        Route::post('jobseeker/candidate_skill_test',[CandidateSkillController::class,'candidate_skill_test']);
        Route::post('jobseeker/candidate_skill_test_que',[CandidateSkillController::class,'candidate_skill_test_que']);
        Route::post('jobseeker/submit_candidate_skill_test',[CandidateSkillController::class,'submit_candidate_skill_test']);
+       Route::get('jobseeker/get_skill_test_score',[CandidateSkillController::class,'get_skill_test_score']);
 
+       //Applied Job 
+       Route::get('jobseeker/my_applied_jobs',[AppliedJobController::class,'my_applied_jobs']);
+       Route::post('jobseeker/mcq_interview_instruction',[AppliedJobController::class,'mcq_interview_instruction']);
+       Route::post('jobseeker/mcq_interview_questions',[AppliedJobController::class,'mcq_interview_questions']);
+       Route::post('jobseeker/submit_mcq_interview_questions',[AppliedJobController::class,'submit_mcq_interview_questions']);
+
+       Route::post('jobseeker/submit_ai_resume_analysis',[ResumeController::class,'submit_ai_resume_analysis']);
 
     });

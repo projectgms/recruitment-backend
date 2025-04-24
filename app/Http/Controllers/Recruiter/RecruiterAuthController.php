@@ -12,6 +12,7 @@ use App\Models\RecruiterRole;
 use App\Models\RolePermission;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -55,14 +56,16 @@ class RecruiterAuthController extends Controller
                 $check_role=RecruiterRole::select('id','role')->where('id',$user->role_id)->where('role',$user->role)->where('active','1')->first();
                 if($check_role)
                 {
+                    $isFirstLogin = is_null($user->last_login);
 
                 $user->oauth_provider = $request->oauth_provider;
                 $user->last_login = Carbon::now();
+                $user->ip_address=$request->getClientIp();
                 $user->save();
                 // Return success response with token and user data
                 $credentials = $request->only('email', 'password');
-                $permissions = $this->getUserPermissions($user);
-        
+                
+                      $permissions = $this->getUserPermissions($user);
               
                 $customClaims = [
                     'role_id'    => $user->role_id,
@@ -72,12 +75,15 @@ class RecruiterAuthController extends Controller
 
                 // Attempt to log the user in and generate the token
                 if ($token = JWTAuth::claims($customClaims)->attempt($credentials)) {
+$user = $user->toArray();
+            $user['first_login'] = $isFirstLogin;
 
                     return response()->json([
                         "status" => true,
                         "message" => "User Successfully Logged in",
                         "token" => $token,
                         "data" => $user, // You can return the user directly
+                       
                         "permissions" => $permissions,
                     ], 200);
                 }
@@ -231,6 +237,14 @@ class RecruiterAuthController extends Controller
                     "add" => 1,
                     "edit" => 1,
                     "delete" => 1
+                ],
+                [
+                    "id" => 7,
+                    "menu" => "reports",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
                 ]
             ];
             foreach ($permission_data as $permission) {
@@ -253,7 +267,57 @@ class RecruiterAuthController extends Controller
             ], 200);
         }
     }
+    public function change_password(Request $request)
+    {
+        $auth = JWTAuth::user();
 
+        // Check if user is null (if token is invalid or expired)
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required', 
+            'old_password'=>'required',
+            'new_password'=>'required',
+        ], [
+            'email.required' => 'Email is required.',  
+            'old_password.required'=>'Old Password is required.',
+            'new_password.required'=>'New Password is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $user = User::where('email', $request->email)->where('role_id',$auth->role_id)->where('company_id',$auth->company_id)->where('active','1')->first();
+        if($request->old_password==$request->new_password)
+        {
+         return response()->json([
+             'status'=>false,
+             'message'=>'Password should be Different.'
+         ]);
+        }else{
+        
+         if(!empty($user))
+         {
+           
+             $user->password = bcrypt($request->new_password); // Your custom way of hashing or processing
+             $user->save();
+             return response()->json(['status' => true, 'message' => 'Password updated.'], 200);
+          
+                                                                                                                                                                                  
+         }else{
+            return response()->json(['status' => true, 'message' => 'Email not found.'], 200);
+          
+         }
+        }
+    }
     public function profile()
     {
 
@@ -273,6 +337,44 @@ class RecruiterAuthController extends Controller
             'status' => true,
             'message' => 'Profile fetched successfully.',
             'data' => $user,
+        ], 200);
+    }
+    
+    public function update_first_login(Request $request)
+    {
+         $user = JWTAuth::user();
+
+        // Check if user is null (if token is invalid or expired)
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+             $validator = Validator::make($request->all(), [
+            'user_id' => 'required', 
+            'first_login'=>'required',
+           
+        ], [
+            'user_id.required' => 'User Id is required.',  
+            'first_login.required'=>'First Login is required.',
+           
+        ]);
+     
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+   $data=['user_id'=>$request->user_id,
+        'first_login'=>$request->first_login];
+        // Return the authenticated user data
+        return response()->json([
+            'status' => true,
+            'message' => 'First Login Status.',
+            'data' => $data,
         ], 200);
     }
 }

@@ -26,7 +26,8 @@ return new class extends Migration
                 $table->text('awards')->nullable();
                 $table->text('hobbies')->nullable();
 
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
          }
     }

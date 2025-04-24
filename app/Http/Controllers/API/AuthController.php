@@ -5,10 +5,10 @@ namespace App\Http\Controllers\API;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\Models\MenuList;
+use App\Models\EmailSubscription;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
-
+use Illuminate\Support\Facades\Validator;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -49,5 +49,43 @@ class AuthController extends Controller
             ], 500);
         }
     }
+    
+     public function email_subscription(Request $request)
+    {
+       
+        $validator = Validator::make($request->all(), [
+            'email' => 'required'
+           ,
+        ], [
+            'email.required' => 'Email is required.',
+         
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        $check_email=EmailSubscription::where('email',$request->email)->count();
+        if($check_email>0)
+        {
+            return response()->json([
+                'status' => true,
+                'message' => 'Thank you for subscription...We will get back to you soon.',
+            ], 200);
+
+        }else{
+            $subscription=new EmailSubscription();
+            $subscription->email=$request->email;
+            $subscription->save();
+return response()->json([
+                'status' => true,
+                'message' => 'Thank you for subscription...We will get back to you soon.',
+            ], 200);
+          
+        }
+    }
+    
     
 }

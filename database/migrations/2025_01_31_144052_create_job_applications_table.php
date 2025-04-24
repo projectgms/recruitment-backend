@@ -20,9 +20,11 @@ return new class extends Migration
                 $table->integer('job_seeker_id');
                 $table->integer('resume_id');
                 $table->text('resume')->nullable();
+                $table->text('resume_json')->nullable();
                 $table->text('cover_letter')->nullable();
                 $table->string('status');
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
        }
     }

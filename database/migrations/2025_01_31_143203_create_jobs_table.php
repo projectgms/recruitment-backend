@@ -34,7 +34,8 @@ return new class extends Migration
                 $table->text('responsibilities');
                 $table->string('status');
                 $table->integer('active');
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
        }
     }

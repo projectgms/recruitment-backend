@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+           if (!Schema::hasTable('candidate_skill_tests')) {
         Schema::create('candidate_skill_tests', function (Blueprint $table) {
             $table->id();
             $table->string('bash_id')->unique();
@@ -18,9 +19,10 @@ return new class extends Migration
             $table->string('skill');
             $table->integer('score');
             $table->integer('total');
-            
-            $table->timestamps();
+             $table->timestamp('created_at')->useCurrent();
+             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
+           }
     }
 
     /**

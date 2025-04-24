@@ -22,14 +22,16 @@ return new class extends Migration
                 $table->string('zipcode')->nullable();
                 $table->string('course')->nullable();
                 $table->string('primary_specialization')->nullable();
-                $table->integer('total_year_exp');
-                $table->integer('total_month_exp');
+                $table->string('work_status')->nullable();
+                $table->string('total_year_exp')->default(0);
+                $table->string('total_month_exp')->default(0);
                 $table->string('dream_company')->nullable();
                 $table->string('secondary_mobile')->nullable();
                 $table->string('secondary_email')->nullable();
                 $table->string('linkedin_url')->nullable();
                 $table->string('github_url')->nullable();
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
               
             });
         }

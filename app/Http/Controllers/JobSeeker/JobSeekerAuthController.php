@@ -50,14 +50,19 @@ class JobSeekerAuthController extends Controller
             // Check if the user is active
             if ($user->active == "1") {
                 // Delete any existing tokens (if necessary)
+              $isFirstLogin = is_null($user->last_login);
+
                 $user->oauth_provider = $request->oauth_provider;
                 $user->last_login = Carbon::now();
+                $user->ip_address=$request->getClientIp();
                 $user->save();
                 $credentials = $request->only('email', 'password');
 
                 // Attempt to log the user in and generate the token
                 if ($token = JWTAuth::attempt($credentials)) {
-
+                     $user = $user->toArray();
+                    $user['first_login'] = $isFirstLogin;
+        
                     // Return success response with token and user data
                     return response()->json([
                         "status" => true,
@@ -225,5 +230,43 @@ class JobSeekerAuthController extends Controller
           
          }
         }
+    }
+    
+       public function update_first_login(Request $request)
+    {
+         $user = JWTAuth::user();
+
+        // Check if user is null (if token is invalid or expired)
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized, invalid token.',
+            ], 401);
+        }
+             $validator = Validator::make($request->all(), [
+            'user_id' => 'required', 
+            'first_login'=>'required',
+           
+        ], [
+            'user_id.required' => 'User Id is required.',  
+            'first_login.required'=>'First Login is required.',
+           
+        ]);
+     
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+   $data=['user_id'=>$request->user_id,
+        'first_login'=>$request->first_login];
+        // Return the authenticated user data
+        return response()->json([
+            'status' => true,
+            'message' => 'First Login Status.',
+            'data' => $data,
+        ], 200);
     }
 }

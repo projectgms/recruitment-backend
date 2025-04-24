@@ -13,12 +13,21 @@ use App\Models\JobSeekerContactDetails;
 use Illuminate\Support\Facades\Storage;
 use App\Models\GenerateResume;
 use App\Models\InterviewRound;
+use App\Models\Company;
+use App\Models\SavedJob;
 
+use App\Models\JobPostNotification;
+use App\Models\JobPostNotificationStatus;
+
+use Illuminate\Support\Facades\Notification;
+use App\Models\JobApplicationNotification;
+use App\Notifications\JobSeeker\UpdateJobApplication;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Facades\Validator;
 
@@ -26,7 +35,7 @@ class JobController extends Controller
 {
     //
 
-    public function job_list(Request $request)
+     public function job_list(Request $request)
     {
         $auth = JWTAuth::user();
         if (!$auth) {
@@ -35,7 +44,8 @@ class JobController extends Controller
         $get_skills = JobSeekerProfessionalDetails::select('skills')
             ->where('user_id', $auth->id)
             ->first();
-
+        if($get_skills)
+        {
         // 1) If it's JSON, decode:
         $jobSeekerSkills = json_decode($get_skills->skills, true);
 
@@ -43,13 +53,13 @@ class JobController extends Controller
         if (!is_array($jobSeekerSkills)) {
             $jobSeekerSkills = array_map('trim', explode(',', $get_skills->skills));
         }
-
         $jobs = Jobs::select(
             'jobs.id',
             'jobs.bash_id',
             'jobs.job_title',
             'jobs.job_type',
             'jobs.experience_required',
+                    'jobs.skills_required',
             'jobs.salary_range',
             'jobs.job_description',
             'jobs.is_hot_job',
@@ -63,9 +73,11 @@ class JobController extends Controller
             ->where(function ($query) use ($jobSeekerSkills) {
                 // Loop each skill for an OR condition (any match)
                 foreach ($jobSeekerSkills as $skill) {
+                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
                     $words = preg_split('/[\s,]+/', strtolower($skill));
                     foreach ($words as $word) {
-                        if (!empty($word)) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
                             $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
                         }
                     }
@@ -74,13 +86,28 @@ class JobController extends Controller
             ->get();
 
         // 5) Transform the company_logo into a full URL
-        $jobs->transform(function ($job) {
+        $jobs->transform(function ($job) use ($auth) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
             if ($job->company_logo) {
-
-                $job->company_logo =  env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $job->company_logo = Storage::disk('s3')->url($job->company_logo);
+                } else {
+                    // Default to local
+                    $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
+                }
+             
             }
             $job->job_locations = json_decode($job->job_locations, true);
-        
+        $save_job=SavedJob::select('id')->where('job_id','=',$job->id)->where('jobseeker_id',$auth->id)->first();
+                
+                if($save_job)
+                {
+                    $job->is_saved_job=true;
+                }else{
+                    $job->is_saved_job=false;
+                }
             return $job;
         });
         return response()->json([
@@ -88,9 +115,15 @@ class JobController extends Controller
             'message' => 'Matching jobs.',
             'data' => $jobs
         ]);
+    }else{
+        return response()->json([
+            'status' => true,
+            'message' => 'Matching jobs.',
+            'data' => []
+        ]);
     }
-
-    public function job_list_filter(Request $request)
+    }
+       public function job_list_filter(Request $request)
     {
         $auth = JWTAuth::user();
         if (!$auth) {
@@ -134,13 +167,14 @@ class JobController extends Controller
         // 3) Add skill matching (case-insensitive) for any skill
         $jobsQuery->where(function ($query) use ($jobSeekerSkills) {
             foreach ($jobSeekerSkills as $skill) {
-                  $words = preg_split('/[\s,]+/', strtolower($skill));
+                $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($skill));
                     foreach ($words as $word) {
-                        if (!empty($word)) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
                             $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
                         }
                     }
-              
             }
         });
 
@@ -164,10 +198,10 @@ class JobController extends Controller
         }
 
         // Filter by salary_range (minimum salary)
-        if ($request->filled('salary')) {
-            // e.g. if 'salary' means "minimum salary"
-            $jobsQuery->where('jobs.salary_range', '>=', $request->salary);
-        }
+        if ($request->filled('minSalary') && $request->filled('maxSalary')) {
+        
+            $jobsQuery->where('jobs.salary_range', '>=', $request->minSalary)->where('jobs.salary_range','<=',$request->maxSalary);
+          }
 
         // Filter by city or country (assuming both stored in companies.locations as text)
         // If you have city or country separately, adjust accordingly.
@@ -176,7 +210,11 @@ class JobController extends Controller
             $location = strtolower($request->location);
             $jobsQuery->whereRaw("LOWER(jobs.location) LIKE ?", ['%' . $location . '%']);
         }
-
+        if ($request->filled('is_hot_job')) {
+            // partial match, case-insensitive
+         
+            $jobsQuery->whereRaw("LOWER(jobs.is_hot_job) LIKE ?", ['%' . $request->is_hot_job . '%']);
+        }
         // If you want separate filters for 'city' and 'country', do something like:
         /*
         if ($request->filled('city')) {
@@ -192,16 +230,31 @@ class JobController extends Controller
         // 5) Get the final list of jobs
         $jobs = $jobsQuery->get();
 
-        $jobs->transform(function ($jobs) {
+        $jobs->transform(function ($jobs) use ($auth) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
             if ($jobs->company_logo) {
-                // Adjust if your 'company_logo' path is stored differently
-                $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $jobs->company_logo = Storage::disk('s3')->url($jobs->company_logo);
+                } else {
+                    // Default to local
+                    $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
+                }
+             
             }
                $jobs->skills_required = json_decode($jobs->skills_required, true);
                 $jobs->industry = json_decode($jobs->industry, true);
                 $jobs->company_locations = json_decode($jobs->company_locations, true);
                 $jobs->job_locations = json_decode($jobs->job_locations, true);
-        
+         $save_job=SavedJob::select('id')->where('job_id','=',$jobs->id)->where('jobseeker_id',$auth->id)->first();
+                
+                if($save_job)
+                {
+                    $jobs->is_saved_job=true;
+                }else{
+                    $jobs->is_saved_job=false;
+                }
             return $jobs;
         });
 
@@ -212,7 +265,7 @@ class JobController extends Controller
         ]);
     }
 
-    public function get_job_details(Request $request)
+          public function get_job_details(Request $request)
     {
         $auth = JWTAuth::user();
         if (!$auth) {
@@ -260,17 +313,49 @@ class JobController extends Controller
             ->first();
             if ($jobs) {
                 // Modify the company logo to include the full URL if it exists
+                 $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
                 if ($jobs->company_logo) {
-                    $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
-                } else {
-                    // If no logo exists, set it to null or a default image URL
-                    $jobs->company_logo = null; // Replace with a default image URL if needed
+                    if ($disk=== 's3') {
+                        // For S3, use Storage facade with the 's3' disk
+                        $jobs->company_logo = Storage::disk('s3')->url($jobs->company_logo);
+                    } else {
+                        // Default to local
+                        $jobs->company_logo = env('APP_URL') . Storage::url('app/public/' . $jobs->company_logo);
+                    }
+                 
+                }else{
+                    $jobs->company_logo=null;
                 }
+               
                 $jobs->skills_required = json_decode($jobs->skills_required, true);
                 $jobs->industry = json_decode($jobs->industry, true);
                 $jobs->company_locations = json_decode($jobs->company_locations, true);
                 $jobs->job_locations = json_decode($jobs->job_locations, true);
-        
+                 $check_job=JobApplication::select('status')->where('job_id','=',$jobs->id)->where('job_seeker_id','=',$auth->id)->first();
+                if($check_job)
+                {
+                    $jobs->job_application_status=true;
+                }else{
+                    $jobs->job_application_status=false;
+                }
+                
+               $resume = GenerateResume::select('is_ai_generated')->where('job_id','=',$jobs->id)->where('is_ai_generated','true')->where('user_id', $auth->id)->first();
+                if($resume)
+                {
+                    $jobs->is_ai_generated=true;
+                }else{
+                    $jobs->is_ai_generated=false;
+                }
+                
+                $save_job=SavedJob::select('id')->where('job_id','=',$jobs->id)->where('jobseeker_id',$auth->id)->first();
+                
+                if($save_job)
+                {
+                    $jobs->is_saved_job=true;
+                }else{
+                    $jobs->is_saved_job=false;
+                }
               
             }
 
@@ -280,7 +365,7 @@ class JobController extends Controller
                 'data' => $jobs
             ]);
     }
-
+    
     public function apply_job(Request $request)
     {
         $auth = JWTAuth::user();
@@ -325,6 +410,9 @@ class JobController extends Controller
     $jobsQuery = Jobs::select(
         'jobs.id',
         'jobs.bash_id',
+        'jobs.contact_email',
+        'jobs.job_title',
+        'jobs.company_id',
         'jobs.experience_required',
     )
         ->where('jobs.status', 'Active')
@@ -336,9 +424,11 @@ class JobController extends Controller
     // 4) Add skill matching (case-insensitive)
     $jobsQuery->where(function ($query) use ($jobSeekerSkills) {
         foreach ($jobSeekerSkills as $skill) {
-            $words = preg_split('/[\s,]+/', strtolower($skill));
+           $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($skill));
                     foreach ($words as $word) {
-                        if (!empty($word)) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
                             $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
                         }
                     }
@@ -363,17 +453,19 @@ class JobController extends Controller
             'message' => 'You already applied this job..'
         ]);
         }else{
-            $resume = GenerateResume::select('resume')->where('user_id', $auth->id)->where('id',$request->resume_id)->first();
-            if ($resume) {
+            $resume = GenerateResume::select('resume','resume_json')->where('user_id', $auth->id)->where('id',$request->resume_id)->first();
+           if ($resume) {
                 // Modify the company logo to include the full URL if it exists
                 if ($resume->resume) {
-                    $resume_url = env('APP_URL') . Storage::url('app/public/' . $resume->resume);
+                    $resume_url =$resume->resume;
                 } else {
                     // If no logo exists, set it to null or a default image URL
                     $resume_url = null; // Replace with a default image URL if needed
                 }
+                $resume_json=$resume->resume_json;
             }else{
                 $resume_url = null; 
+                $resume_json='';
             }
       $apply=new JobApplication();
       $apply->bash_id=Str::uuid();
@@ -381,7 +473,21 @@ class JobController extends Controller
       $apply->job_seeker_id=$auth->id;
       $apply->status='Applied';
       $apply->resume=$resume_url;
+      $apply->resume_json=$resume_json;
       $apply->save();
+      Notification::route('mail', $matchingJobs->contact_email)->notify(new UpdateJobApplication($auth->name, $matchingJobs->job_title, $auth->email));
+    
+     $job_application_notification=new JobApplicationNotification();
+      $job_application_notification->bash_id = Str::uuid();
+      $job_application_notification->job_id =$request->id;
+      $job_application_notification->job_application_id =$apply->id;
+      $job_application_notification->company_id=$matchingJobs->company_id;
+      $job_application_notification->jobseeker_id=$auth->id;
+      $job_application_notification->type='Job Application';
+      $job_application_notification->message='New Job application added for the role '.$matchingJobs->job_title;
+      $job_application_notification->is_read='0';
+      $job_application_notification->save();
+      
       return response()->json([
         'status' => true,
         'message' => 'Job Applied.',
@@ -398,7 +504,8 @@ class JobController extends Controller
 
     }
 
-    public function get_job_round(Request $request)
+
+ public function get_job_round(Request $request)
     {
         $auth = JWTAuth::user();
         if (!$auth) {
@@ -445,5 +552,223 @@ class JobController extends Controller
                     'message' => 'Job or rounds not found.'
                 ], 404);
             }
+    }
+    
+     public function submit_saved_job(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required', 
+            'bash_id'=>'required',  
+           
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'bash_id.required'=>'Bash Id is required.',
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+         $check_job=SavedJob::where('job_id','=',$request->job_id)->where('jobseeker_id','=',$auth->id)->first();
+        if($check_job)
+        {
+         $check_job->delete();
+  
+        return response()->json([
+            'status' => true,
+            'message' => 'You Unsaved Job.'
+        ]);
+        }else{
+          
+      $save=new SavedJob();
+      $save->bash_id=Str::uuid();
+      $save->job_id=$request->job_id;
+      $save->jobseeker_id=$auth->id;
+  
+      $save->save();
+      return response()->json([
+        'status' => true,
+        'message' => 'Job Saved.',
+      
+    ]);
+        }
+    }
+    
+    public function my_saved_job()
+    {
+        $auth = JWTAuth::user();
+       
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $jobs = SavedJob::select(
+            'candidate_saved_jobs.id',
+            'jobs.bash_id',
+            
+             'candidate_saved_jobs.jobseeker_id',
+            'jobs.id as job_id',
+            'jobs.round',
+            'jobs.job_title',
+            'jobs.job_type',
+            'jobs.experience_required',
+            'jobs.salary_range',
+           
+            'jobs.is_hot_job',
+            'jobs.location as job_locations',
+            'companies.company_logo',
+            'companies.name as company_name',
+            'companies.locations as company_locations',
+            'jobs.created_at as job_post_date'
+        )
+        ->Join('jobs','jobs.id','=','candidate_saved_jobs.job_id')
+        ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
+         ->where('candidate_saved_jobs.jobseeker_id','=',$auth->id)
+         ->orderBy('candidate_saved_jobs.created_at','desc')
+        ->get();
+      
+        if($jobs)
+        {
+            $jobs->transform(function ($job) {
+               $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
+                if ($job->company_logo) {
+                    if ($disk=== 's3') {
+                        // For S3, use Storage facade with the 's3' disk
+                        $job->company_logo = Storage::disk('s3')->url($job->company_logo);
+                    } else {
+                        // Default to local
+                        $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
+                    }
+                 
+                }else{
+                     $job->company_logo=null;
+                }
+                $job->job_locations = json_decode($job->job_locations, true);
+                $job->company_locations = json_decode($job->company_locations, true);
+        
+          return $job;
+            });
+              return response()->json([
+                'status' => true,
+                'message' => 'Candidate Saved Jobs.',
+                'data' => $jobs
+            ]);
+        }else{
+              return response()->json([
+                'status' => true,
+                'message' => 'Candidate Saved Jobs.',
+                'data' => []
+            ]);
+        }
+    }
+    
+       public function check_job_post_notification(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $get_skills = JobSeekerProfessionalDetails::select('skills')
+            ->where('user_id', $auth->id)
+            ->first();
+
+        // 1) If it's JSON, decode:
+        $jobSeekerSkills = json_decode($get_skills->skills, true);
+
+        // OR if it’s comma-separated, do:
+        if (!is_array($jobSeekerSkills)) {
+            $jobSeekerSkills = array_map('trim', explode(',', $get_skills->skills));
+        }
+        $jobs = JobPostNotification::select(
+            'jobs.id as job_id',
+            'job_post_notifications.id',
+            'jobs.bash_id as job_bash_id',
+            'job_post_notifications.type',
+            'job_post_notifications.message',
+                        'job_post_notifications.created_at',
+
+            \DB::raw('IFNULL(job_post_notification_status.is_read, 0) as is_read')
+           
+        )->leftJoin('jobs','jobs.id','=','job_post_notifications.job_id')
+            ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
+            ->leftJoin('job_post_notification_status', 'job_post_notification_status.job_post_notification_id', '=', 'job_post_notifications.id')
+            ->where(function ($query) use ($jobSeekerSkills) {
+                // Loop each skill for an OR condition (any match)
+                foreach ($jobSeekerSkills as $skill) {
+                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($skill));
+                    foreach ($words as $word) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
+                            $query->orWhereRaw("LOWER(jobs.skills_required) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+                }
+            })
+            ->get();
+            return response()->json([
+                'status' => true,
+                'message' => 'Job Post Notification.',
+                'data' => $jobs
+            ]);
+    }
+
+     public function update_job_post_notification(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required', 
+           
+            'id'=>'required',
+           
+        ], [
+            'job_id.required' => 'Job Id is required.',
+          
+            'id.required'=>'Id is required'
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+        $status=JobPostNotificationStatus::Join('job_post_notifications','job_post_notifications.id','job_post_notification_status.job_post_notification_id')->where('job_post_notifications.job_id',$request->job_id)->where('job_post_notification_status.jobseeker_id',$auth->id)
+            ->where('job_post_notification_status.job_post_notification_id',$request->id)->first();
+        if($status)
+        {
+            $status->is_read='1';
+            $status->save();
+        }else{
+           $notification= new JobPostNotificationStatus();
+            $notification->bash_id=Str::uuid();
+  
+      $notification->jobseeker_id=$auth->id;
+      $notification->job_post_notification_id=$request->id;
+      $notification->is_read='1';
+    
+      $notification->save();
+        }
+         return response()->json([
+                'status' => true,
+                'message' => 'Job Post Notification Status Changed.',
+               
+            ]);
     }
 }

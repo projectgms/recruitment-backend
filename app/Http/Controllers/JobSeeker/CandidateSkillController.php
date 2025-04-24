@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 use App\Models\User;
 use App\Models\JobSeekerProfessionalDetails;
@@ -20,7 +21,7 @@ class CandidateSkillController extends Controller
 {
     //
 
-    public function get_candidate_skills()
+     public function get_candidate_skills()
     {
         $auth = JWTAuth::user();
        
@@ -53,7 +54,7 @@ class CandidateSkillController extends Controller
 
     }
 
-    public function candidate_skill_test(Request $request)
+   public function candidate_skill_test(Request $request)
     {
         $auth = JWTAuth::user();
       
@@ -122,8 +123,19 @@ class CandidateSkillController extends Controller
         $get_experience=JobSeekerContactDetails::select('jobseeker_professional_details.skills','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
         ->join('jobseeker_professional_details','jobseeker_professional_details.user_id','=','job_seeker_contact_details.user_id')
         ->where('job_seeker_contact_details.user_id','=',$auth->id)
-        ->whereRaw('LOWER(jobseeker_professional_details.skills) LIKE ?', ['%' . strtolower($request->skill) . '%'])
+        ->where(function ($query) use ($request) {
+             $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($request->skill));
+                    foreach ($words as $word) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
+                            $query->orWhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+       
+    })
         ->first();
+      
         if($get_experience)
         {
          
@@ -132,7 +144,19 @@ class CandidateSkillController extends Controller
                 $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                 ->where('skill_level','Basic')
-                ->whereRaw('LOWER(skill) LIKE ?', '%' . strtolower($request->skill) . '%')
+                 ->where(function ($query) use ($request) {
+      
+        
+         $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($request->skill));
+                    foreach ($words as $word) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
+                            $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+    })
+                
                 ->inRandomOrder()
                 ->limit(10)
                 ->get();
@@ -141,17 +165,35 @@ class CandidateSkillController extends Controller
                 $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                 ->where('skill_level','Medium')
-                ->whereRaw('LOWER(skill) LIKE ?', '%' . strtolower($request->skill) . '%')
+                ->where(function ($query) use ($request) {
+        $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($request->skill));
+                    foreach ($words as $word) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
+                            $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+    })
                 ->inRandomOrder()
                 ->limit(10)
                 ->get();
             }else{
-               
-                $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
+             
+                $get_que=SkillAssQuestion::select('id','skill','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
                
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                  ->where('skill_level','High')
-                ->whereRaw('LOWER(skill) LIKE ?', '%' . strtolower($request->skill) . '%')
+                 ->where(function ($query) use ($request) {
+        $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
+
+                    $words = preg_split('/[\s,]+/', strtolower($request->skill));
+                    foreach ($words as $word) {
+                        if (!empty($word) && !in_array($word, $stopWords)) {
+                            $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                        }
+                    }
+    })
                 ->inRandomOrder()
                 ->limit(10)
                 ->get();
@@ -215,5 +257,40 @@ class CandidateSkillController extends Controller
             return response()->json(['status' => true, 'message' => 'Retest Submitted.'], 200);
         }
 
+    }
+    
+     public function get_skill_test_score()
+    {
+        $auth = JWTAuth::user();
+      
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+      $updatedAt = CandidateSkillTest::where('jobseeker_id', $auth->id)->max('updated_at');
+        $version = optional($updatedAt)->timestamp ?? 'no-update';
+    
+        $cacheKey = "skill_test_score_{$auth->id}_v{$version}";
+    
+        $scoreWithBatch = Cache::rememberForever($cacheKey, function () use ($auth) {
+            $score = CandidateSkillTest::select('skill', 'score', 'total')
+                ->where('jobseeker_id', '=', $auth->id)
+                ->get();
+    
+            return $score->map(function ($item) {
+                $item->batch = ($item->score >= 7) ? 'true' : 'false';
+                return $item;
+            });
+        });
+    
+        return response()->json([
+            'status' => true,
+            'message' => 'Candidate Skill Test Questions',
+            'data' => $scoreWithBatch
+        ]);
+      
+       
     }
 }

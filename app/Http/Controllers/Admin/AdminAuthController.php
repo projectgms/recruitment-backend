@@ -10,6 +10,7 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use App\Models\SuperAdminRole;
 use App\Models\RolePermission;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -57,8 +58,14 @@ class AdminAuthController extends Controller
                 $update_slogin->last_login=Carbon::now();
                 $update_slogin->save();
                 $credentials = $request->only('email', 'password');
+               //For cache
+                $updatedAt = DB::table('role_permissions')->max('updated_at');
+                 $version = $updatedAt ? Carbon::parse($updatedAt)->timestamp : 'no-update';
+            
+                $cacheKey = "permissions_user_{$user->id}_v{$version}";
+                
                 $permissions = $this->getUserPermissions($user);
-              
+               
                 $customClaims = [
                     'role_id'    => $user->role_id,
                     'company_id' => $user->company_id,

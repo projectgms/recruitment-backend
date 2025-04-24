@@ -18,7 +18,8 @@ return new class extends Migration
                 $table->integer('user_id');
                 $table->text('message');
                 $table->integer('is_read');
-                $table->timestamps();
+                 $table->timestamp('created_at')->useCurrent();
+                $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             }); 
        }
     }

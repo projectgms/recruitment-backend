@@ -16,6 +16,7 @@ class JobApplication extends Model
         'job_seeker_id',
         'resume_id',
         'resume',
+        'resume_json',
         'cover_letter',
         'status',
         'active'
