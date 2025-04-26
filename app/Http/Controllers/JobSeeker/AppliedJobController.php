@@ -217,7 +217,7 @@ class AppliedJobController extends Controller
         ->Join('job_applications','job_applications.job_seeker_id','=','job_seeker_contact_details.user_id')
         ->Join('jobs','jobs.id','=','job_applications.job_id')
         ->where('job_applications.job_seeker_id','=',$auth->id)
-            ->where('jobs.id',$request->job_id)
+        ->where('jobs.id',$request->job_id)
          ->where('job_applications.id',$request->job_application_id)
           ->where('job_applications.bash_id',$request->bash_id)
         ->first();

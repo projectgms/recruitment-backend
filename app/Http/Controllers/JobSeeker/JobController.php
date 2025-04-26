@@ -715,7 +715,7 @@ class JobController extends Controller
                         }
                     }
                 }
-            })
+            })->orderBy('job_post_notifications.created_at','desc')
             ->get();
             return response()->json([
                 'status' => true,

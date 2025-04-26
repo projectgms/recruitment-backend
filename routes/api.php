@@ -63,6 +63,7 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/delete_job_post', [JobPostController::class, 'delete_job_post']);
         Route::post('recruiter/get_job_post_count',[JobPostController::class,'get_job_post_count']);
         Route::post('recruiter/salary_insights',[JobPostController::class,'salary_insights']);
+        Route::get('recruiter/recent_job_post',[JobPostController::class,'recent_job_post']);
 
 
 
@@ -96,6 +97,8 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/update_candidate_interview_status',[InterviewController::class,'update_candidate_interview_status']);
 
         Route::get('recruiter/get_plans',[RecruiterSubscriptionController::class,'get_plans']);
+        Route::post('recruiter/create_subscription_order',[RecruiterSubscriptionController::class,'create_subscription_order']);
+        Route::post('recruiter/verify_payment',[RecruiterSubscriptionController::class,'verify_payment']);
 
         Route::post('logout', [AuthController::class, 'logout']);
 
