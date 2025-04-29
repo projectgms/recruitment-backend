@@ -259,7 +259,7 @@ class CandidateSkillController extends Controller
 
     }
     
-     public function get_skill_test_score()
+    public function get_skill_test_score()
     {
         $auth = JWTAuth::user();
       
@@ -269,21 +269,28 @@ class CandidateSkillController extends Controller
                 'message' => 'Unauthorized',
             ], 401);
         }
-      $updatedAt = CandidateSkillTest::where('jobseeker_id', $auth->id)->max('updated_at');
-        $version = optional($updatedAt)->timestamp ?? 'no-update';
-    
-        $cacheKey = "skill_test_score_{$auth->id}_v{$version}";
-    
-        $scoreWithBatch = Cache::rememberForever($cacheKey, function () use ($auth) {
+     
             $score = CandidateSkillTest::select('skill', 'score', 'total')
                 ->where('jobseeker_id', '=', $auth->id)
                 ->get();
     
-            return $score->map(function ($item) {
-                $item->batch = ($item->score >= 7) ? 'true' : 'false';
-                return $item;
+             $scoreWithBatch= $score->map(function ($item) {
+             if ($item->score >= 9 && $item->score <= 10) {
+            $item->batch_type = 'Gold';
+        } elseif ($item->score >= 7 && $item->score <= 8) {
+            $item->batch_type = 'Silver';
+        } elseif ($item->score >= 5 && $item->score <= 6) {
+            $item->batch_type = 'Bronze';
+        } else {
+            $item->batch_type = null;
+        }
+
+        // Set batch true/false based on score >=5
+        $item->batch = ($item->score >= 5) ? true : false;
+
+        return $item;
             });
-        });
+       
     
         return response()->json([
             'status' => true,
