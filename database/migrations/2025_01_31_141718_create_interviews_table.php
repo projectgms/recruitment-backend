@@ -24,7 +24,7 @@ return new class extends Migration
                   $table->integer('round_id');
                 $table->string('score');
                 $table->string('total');
-                $table->dateTime('interview_date');
+                $table->dateTime('interview_date')->nullable();
                 $table->string('interview_mode');
                 $table->text('interview_link');
                 $table->string('status');

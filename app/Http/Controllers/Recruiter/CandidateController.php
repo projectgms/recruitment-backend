@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Models\Interview;
+use App\Models\InterviewRound;
 
 class CandidateController extends Controller
 {
@@ -307,6 +309,106 @@ class CandidateController extends Controller
                 if($request->job_application_status!=$job_application->status)
                 {
                 Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status));
+       
+                }
+            }
+        }
+        return response()->json([
+            'status' => true,
+            'message' => 'Job Application Status .',
+            
+        ]);
+    }
+    }
+    
+       public function update_filter_job_applicant_test(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'job_application_id' => 'array|required',
+            'job_application_status' => 'required',
+            'job_id' => 'required'
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'job_application_id.required' => 'Job Application Id is required.',
+            'job_application_status' => 'Job Application Status required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $job_application = JobApplication::select('users.name','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
+        ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
+        ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
+       ->leftJoin('companies', 'companies.id', '=', 'users.company_id')
+       
+        ->where('jobs.id', $request->job_id)
+        ->whereIn('job_applications.id', $request->job_application_id)
+        ->get();
+    if ($job_application) {
+        foreach ($job_application as $job_application) {
+            
+            $update_status = JobApplication::where('id', $job_application->job_application_id)
+                ->where('job_id', $request->job_id)
+                ->first();
+            
+            if ($update_status) {
+                $update_status->status = $request->job_application_status;
+                $update_status->save();
+                if($request->job_application_status!=$job_application->status)
+                {
+                    if($request->job_application_status=='Shortlisted')
+                    {
+                        
+                                                $rounds = json_decode($job_application->round, true); // true => decode as array
+                        
+                        // Get the first round ID safely
+                        $first_round_id = $rounds[0] ?? null; // null if not set
+                        
+                        if ($first_round_id) {
+                            $check_round_already_present = Interview::select('round_id')
+                                ->where('job_application_id', $job_application->job_application_id)
+                                 ->where('jobseeker_id', $job_application->job_seeker_id)
+                                  ->where('company_id', $job_application->company_id)
+                                ->where('round_id', $first_round_id)
+                                ->first();
+                        
+                            if (!$check_round_already_present) {
+                                // If not present, create a new interview or whatever you want
+                                  $test = new Interview();
+                                $test->bash_id = Str::uuid();
+                                $test->job_application_id = $job_application->job_application_id;
+                                $test->jobseeker_id =$job_application->job_seeker_id;
+                                 $test->company_id =$job_application->company_id;
+                                  $test->round_id = $first_round_id;
+                              
+                                $test->score = 0;
+                                $test->total =10;
+                                  $test->interview_date = null;
+                                    $test->interview_mode = '';
+                                 $test->status = 'Pending';
+                              
+                    
+                                $test->save();
+                            }
+                        }
+                    }
+             //   Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status));
        
                 }
             }

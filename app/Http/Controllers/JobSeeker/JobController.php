@@ -108,6 +108,14 @@ class JobController extends Controller
                 }else{
                     $job->is_saved_job=false;
                 }
+                
+                 $check_job=JobApplication::select('status')->where('job_id','=',$job->id)->where('job_seeker_id','=',$auth->id)->first();
+                if($check_job)
+                {
+                    $job->job_application_status=true;
+                }else{
+                    $job->job_application_status=false;
+                }
             return $job;
         });
         return response()->json([
@@ -254,6 +262,13 @@ class JobController extends Controller
                     $jobs->is_saved_job=true;
                 }else{
                     $jobs->is_saved_job=false;
+                }
+                  $check_job=JobApplication::select('status')->where('job_id','=',$jobs->id)->where('job_seeker_id','=',$auth->id)->first();
+                if($check_job)
+                {
+                    $jobs->job_application_status=true;
+                }else{
+                    $jobs->job_application_status=false;
                 }
             return $jobs;
         });

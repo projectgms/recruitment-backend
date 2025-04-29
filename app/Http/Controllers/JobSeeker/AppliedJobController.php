@@ -98,13 +98,13 @@ class AppliedJobController extends Controller
                     })
                     ->whereIn('interview_rounds.id', $roundIds ?? [])
 
-                    ->get()
-                    ->map(function ($round) {
-                        // If status is null, set to 'Pending'
-                        $round->mode = 'Online';
-                        $round->status = $round->status ?? 'Pending';
-                        return $round;
-                    });
+                    ->get();
+                    // ->map(function ($round) {
+                    //     // If status is null, set to 'Pending'
+                    //     $round->mode = 'Online';
+                    //     $round->status = $round->status ?? 'Pending';
+                    //     return $round;
+                    // });
                 return $job;
             });
             return response()->json([
