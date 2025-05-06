@@ -32,6 +32,7 @@ return new class extends Migration
                 $table->date('expiration_date');
                 $table->time('expiration_time');
                 $table->text('responsibilities');
+                $table->string('is_pin')->default("No");
                 $table->string('status');
                 $table->integer('active');
                  $table->timestamp('created_at')->useCurrent();

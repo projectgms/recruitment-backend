@@ -117,6 +117,7 @@ class CandidateController extends Controller
                 ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
                 ->where('jobs.id', $request->job_id)
                 ->where('jobs.bash_id', $request->bash_id)
+                ->where('job_applications.status','Applied')
                 ->get();
 
             $disk = env('FILESYSTEM_DISK', 'local');
@@ -158,6 +159,101 @@ class CandidateController extends Controller
             'message' => 'Candidate Information.',
             'data' => $candidates
         ]);
+    }
+     public function smart_search_candidate(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'skills' => 'array|required',
+          
+        ], [
+            'skills.required' => 'Job Title is required.',
+           
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+     
+    // Convert the skills to an array (either JSON or comma-separated)
+    $jobSeekerSkills = $request->skills;
+    if (!is_array($jobSeekerSkills)) {
+        $jobSeekerSkills = array_map('trim', explode(',', $request->skills));
+    }
+        $query = User::select(
+            'users.open_to_work', 'users.id', 'users.name', 'users.first_name', 'users.middle_name',
+            'users.last_name', 'users.email', 'users.mobile', 'users.location', 'users.gender',
+            'users.dob', 'users.marital_status', 'users.medical_history', 'users.disability', 'users.language_known',
+            'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city',
+            'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course',
+            'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company',
+            'job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp',
+            'job_seeker_contact_details.secondary_mobile', 'job_seeker_contact_details.secondary_email',
+            'job_seeker_contact_details.linkedin_url', 'job_seeker_contact_details.github_url',
+            'jobseeker_education_details.certifications', 'jobseeker_education_details.publications',
+            'jobseeker_education_details.trainings', 'jobseeker_education_details.educations',
+            'jobseeker_professional_details.experience', 'jobseeker_professional_details.summary',
+            'jobseeker_professional_details.skills', 'jobseeker_professional_details.achievement',
+            'jobseeker_professional_details.extra_curricular', 'jobseeker_professional_details.projects',
+            'jobseeker_professional_details.internship'
+        )
+        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+      
+        ->where('users.active', 1);
+       
+
+        $query->where(function ($sub) use ($jobSeekerSkills) {
+            foreach ($jobSeekerSkills as $skill) {
+                $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
+                $words = preg_split('/[\s,]+/', strtolower($skill));
+                foreach ($words as $word) {
+                    if (!empty($word) && !in_array($word, $stopWords)) {
+                        $sub->WhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ["%{$word}%"]);
+                    }
+                }
+            }
+        });
+        // if ($request->filled('search')) {
+        //     $jobTitle = strtolower($request->search);
+        //     $query->orWhereRaw("LOWER(jobs.job_title) LIKE ?", ['%' . $jobTitle . '%']);
+        // }
+        if ($request->filled('search')) {
+            // partial match, case-insensitive
+            $location = strtolower($request->search);
+            $query->orWhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
+        }
+
+         $candidates=$query->get()->transform(function ($candidate) {
+            foreach (['certifications', 'publications', 'trainings', 'educations', 'experience', 'skills', 'projects', 'internship'] as $field) {
+                $candidate->{$field} = json_decode($candidate->{$field}, true);
+            }
+            $candidate->open_to_work = (bool) $candidate->open_to_work;
+            return $candidate;
+        });
+   
+
+    return response()->json([
+        'status' => true,
+        'message' => ' Candidate Information.',
+        'data' => $candidates
+    ]);
+        
     }
 
    public function open_to_work(Request $request)
@@ -257,7 +353,7 @@ class CandidateController extends Controller
         ]);
     }
 
-    public function update_filter_job_applicant(Request $request)
+    public function update_filter_job_applicant_test(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -291,7 +387,7 @@ class CandidateController extends Controller
         $job_application = JobApplication::select('users.name','companies.name as company_name','companies.website','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
         ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
         ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
-       ->leftJoin('companies', 'companies.id', '=', 'users.company_id')
+       ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
        
         ->where('jobs.id', $request->job_id)
         ->whereIn('job_applications.id', $request->job_application_id)
@@ -321,7 +417,7 @@ class CandidateController extends Controller
     }
     }
     
-       public function update_filter_job_applicant_test(Request $request)
+       public function update_filter_job_applicant(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -355,10 +451,11 @@ class CandidateController extends Controller
         $job_application = JobApplication::select('users.name','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
         ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
         ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
-       ->leftJoin('companies', 'companies.id', '=', 'users.company_id')
+       ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
        
         ->where('jobs.id', $request->job_id)
         ->whereIn('job_applications.id', $request->job_application_id)
+        ->where('jobs.status','Active')
         ->get();
     if ($job_application) {
         foreach ($job_application as $job_application) {
@@ -368,18 +465,19 @@ class CandidateController extends Controller
                 ->first();
             
             if ($update_status) {
-                $update_status->status = $request->job_application_status;
-                $update_status->save();
-                if($request->job_application_status!=$job_application->status)
+              
+                if($request->job_application_status!=$job_application->status && $job_application->status=='Applied')
                 {
-                    if($request->job_application_status=='Shortlisted')
-                    {
-                        
-                                                $rounds = json_decode($job_application->round, true); // true => decode as array
+                     
+                        $rounds = json_decode($job_application->round, true); // true => decode as array
                         
                         // Get the first round ID safely
                         $first_round_id = $rounds[0] ?? null; // null if not set
                         
+                        $get_round_name=InterviewRound::select('round_name')->where('id',$first_round_id)->first();
+                    if($request->job_application_status=='Shortlisted')
+                    {
+                      
                         if ($first_round_id) {
                             $check_round_already_present = Interview::select('round_id')
                                 ->where('job_application_id', $job_application->job_application_id)
@@ -390,25 +488,40 @@ class CandidateController extends Controller
                         
                             if (!$check_round_already_present) {
                                 // If not present, create a new interview or whatever you want
+                                if($request->interview_date && $request->interview_mode )
+                                {
+                                       $update_status->status = $request->job_application_status;
+                                        $update_status->save();
+                        
                                   $test = new Interview();
                                 $test->bash_id = Str::uuid();
                                 $test->job_application_id = $job_application->job_application_id;
                                 $test->jobseeker_id =$job_application->job_seeker_id;
-                                 $test->company_id =$job_application->company_id;
-                                  $test->round_id = $first_round_id;
-                              
+                                $test->company_id =$job_application->company_id;
+                                $test->round_id = $first_round_id;
+                                
                                 $test->score = 0;
                                 $test->total =10;
-                                  $test->interview_date = null;
-                                    $test->interview_mode = '';
-                                 $test->status = 'Pending';
+                                $test->interview_date =  $request->interview_date;
+                                $test->interview_mode = $request->interview_mode;
+                                 $test->interview_link = $request->interview_link;
+                                $test->status = $request->job_application_status;
                               
                     
                                 $test->save();
+                                }else{
+                                      return response()->json([
+                                        'status' => false,
+                                        'message' => 'Interview Date and Mode is required.',
+                                        
+                                    ]); 
+                                }
+                                
+                                
                             }
                         }
                     }
-             //   Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status));
+                     Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status,$get_round_name->round_name,$request->interview_date?$request->interview_date:'',$request->interview_mode?$request->interview_mode:'',$request->interview_link?$request->interview_link:''));
        
                 }
             }
@@ -418,6 +531,12 @@ class CandidateController extends Controller
             'message' => 'Job Application Status .',
             
         ]);
+    }else{
+          return response()->json([
+            'status' => false,
+            'message' => 'Job Status not active.',
+            
+        ]); 
     }
     }
     
@@ -561,8 +680,9 @@ class CandidateController extends Controller
             'users.email',
             'users.mobile',
             'job_applications.status as application_status',
-            'job_applications.id',
-            'job_applications.bash_id',
+            'job_applications.id as job_application_id',
+            'job_applications.bash_id as job_application_bash_id',
+            'jobs.id as job_id',
             'jobs.job_title'
         )
             ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
@@ -633,7 +753,7 @@ class CandidateController extends Controller
             'id'=>'required',
            
         ], [
-            'job_id.required' => 'Job Id is required.',
+            'job_application_id.required' => 'Job Application Id is required.',
           
             'id.required'=>'Id is required'
           

@@ -82,7 +82,7 @@ class JobController extends Controller
                         }
                     }
                 }
-            })
+            })->orderBy('jobs.created_at','desc')
             ->get();
 
         // 5) Transform the company_logo into a full URL
@@ -236,7 +236,7 @@ class JobController extends Controller
         */
 
         // 5) Get the final list of jobs
-        $jobs = $jobsQuery->get();
+        $jobs = $jobsQuery->orderBy('jobs.created_at','desc')->get();
 
         $jobs->transform(function ($jobs) use ($auth) {
              $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
