@@ -175,7 +175,7 @@ class CandidateController extends Controller
         }
         $validator = Validator::make($request->all(), [
             'skills' => 'array|required',
-          
+            
         ], [
             'skills.required' => 'Job Title is required.',
            
@@ -233,11 +233,17 @@ class CandidateController extends Controller
         //     $jobTitle = strtolower($request->search);
         //     $query->orWhereRaw("LOWER(jobs.job_title) LIKE ?", ['%' . $jobTitle . '%']);
         // }
-        if ($request->filled('search')) {
+        if ($request->filled('location')) {
             // partial match, case-insensitive
-            $location = strtolower($request->search);
+            $location = strtolower($request->location);
             $query->orWhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
         }
+          if ($request->filled('experience')) {
+            // partial match, case-insensitive
+            $exp = strtolower($request->experience);
+            $query->orWhereRaw("LOWER(job_seeker_contact_details.total_year_exp) LIKE ?", ['%' . $exp . '%']);
+        }
+         
 
          $candidates=$query->get()->transform(function ($candidate) {
             foreach (['certifications', 'publications', 'trainings', 'educations', 'experience', 'skills', 'projects', 'internship'] as $field) {

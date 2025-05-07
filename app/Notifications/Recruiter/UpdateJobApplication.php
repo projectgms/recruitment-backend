@@ -15,7 +15,7 @@ class UpdateJobApplication extends Notification
     protected $company_name;
     protected $company_website;
     protected $status; // e.g., "shortlisted", "rejected", etc.
-    protected $round_name;
+      protected $round_name;
     protected $interview_date;
     protected $interview_mode;
     protected $interview_link;
@@ -53,14 +53,34 @@ public function toMail(object $notifiable): MailMessage
    
     switch ($this->status) {
         case 'Shortlisted':
-            return (new MailMessage)
-                ->subject("You’ve Been Shortlisted – $jobTitle at $companyName")
-                ->greeting("Hi $this->name,")
-                ->line("Great news! You’ve been shortlisted for the **$roundName** of the $jobTitle role at $companyName.")
-                ->action('View Company Website', $companyWebsite)
-                ->line("Our team will reach out to you soon with the next steps.")
-                ->line('Best regards,')
-                ->line($companyName);
+           $interviewDate = $this->interview_date 
+        ? \Carbon\Carbon::parse($this->interview_date)->format('F j, Y \a\t g:i A') 
+        : 'TBD';
+
+    $platform = $this->interview_mode ?? 'To be confirmed';
+    $link = $this->interview_link;
+    $hasLink = !empty($link);
+
+    $mail = (new MailMessage)
+        ->subject("Interview Scheduled – $jobTitle at $companyName")
+        ->greeting("Hi $this->name,")
+        ->line("You’ve been Shortlisted for the **$roundName** interview for the $jobTitle position at $companyName.")
+        ->line("**Interview Details:**")
+        ->line("- **Date & Time**: $interviewDate")
+        ->line("- **Platform**: $platform");
+
+    if ($hasLink) {
+        $mail->line("- **Link**: [Click to Join Interview]($link)")
+             ->action('Join Interview', $link);
+    } else {
+        $mail->line("- **Link**: Please log in to your dashboard and check under your applied jobs to access the interview link.");
+    }
+
+    return $mail
+        ->line("If you have any questions, feel free to reply to this email.")
+        ->line('Best regards,')
+        ->line($companyName);
+
 
         case 'Hold':
             return (new MailMessage)
@@ -129,13 +149,35 @@ public function toMail(object $notifiable): MailMessage
                 ->line($companyName);
 
         case 'Selected':
-            return (new MailMessage)
-                ->subject("You’ve Been Selected – $jobTitle at $companyName")
-                ->greeting("Hi $this->name,")
-                ->line("We’re excited to inform you that you’ve been selected after the **$roundName** for the $jobTitle role at $companyName.")
-                ->line("Further details will be shared shortly.")
-                ->line('Congratulations!')
-                ->line($companyName);
+         
+
+$interviewDate = $this->interview_date 
+        ? \Carbon\Carbon::parse($this->interview_date)->format('F j, Y \a\t g:i A') 
+        : 'TBD';
+
+    $platform = $this->interview_mode ?? 'To be confirmed';
+    $link = $this->interview_link;
+    $hasLink = !empty($link);
+
+    $mail = (new MailMessage)
+       ->subject("You’ve Been Selected – $jobTitle at $companyName")
+        ->greeting("Hi $this->name,")
+         ->line("We’re excited to inform you that you’ve been selected after the **$roundName** for the $jobTitle role at $companyName.")
+        ->line("You’ve been scheduled for the next round interview for the $jobTitle position at $companyName.")
+        ->line("**Interview Details:**")
+        ->line("- **Date & Time**: $interviewDate")
+        ->line("- **Platform**: $platform");
+
+    if ($hasLink) {
+        $mail->line("- **Link**: [Click to Join Interview]($link)")
+             ->action('Join Interview', $link);
+    } else {
+        $mail->line("- **Link**: Please log in to your dashboard and check under your applied jobs to access the interview link.");
+    }
+      return $mail
+        ->line("If you have any questions, feel free to reply to this email.")
+        ->line('Best regards,')
+        ->line($companyName);
 
         case 'Cancelled':
             return (new MailMessage)

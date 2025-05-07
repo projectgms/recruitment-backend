@@ -481,7 +481,7 @@ class InterviewController extends Controller
                           if($update_job_application)
                            {
                               JobApplication::where('id', $update_status->job_application_id)
-            ->update(['status' => $request->status]);
+            ->update(['status' =>  $request->status]);
 
                            }
                         // return response()->json([
@@ -494,12 +494,12 @@ class InterviewController extends Controller
                    
                 }else{
                     //update current round interview status 
-                          if($request->status=='Scheduled')
-                          {
-                               $update_status->interview_mode = $request->interview_mode;
-                               $update_status->interview_date = $request->interview_date;
-                               $update_status->interview_link = $request->interview_link;
-                          }
+                        //   if($request->status=='Scheduled')
+                        //   {
+                        //       $update_status->interview_mode = $request->interview_mode;
+                        //       $update_status->interview_date = $request->interview_date;
+                        //       $update_status->interview_link = $request->interview_link;
+                        //   }
                            $update_status->status = $request->status;
                            $update_status->save();
                            
@@ -535,6 +535,49 @@ class InterviewController extends Controller
             return response()->json([
                 'status' => true,
                 'message' =>'Interview Id not found.',
+               
+            ]);
+        }
+    }
+    
+     public function today_interview(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $today = Carbon::today()->toDateString();
+
+        $today_interview = Interview::select('users.name','jobs.job_title','users.email','job_applications.id as job_application_id', 'interviews.status','interview_rounds.round_name','interviews.round_id','interviews.interview_date','interviews.interview_link','interviews.interview_mode')
+        ->Join('job_applications', 'job_applications.id', '=', 'interviews.job_application_id')
+       
+        ->Join('jobs', 'jobs.id', '=', 'job_applications.job_id')
+        ->Join('users', 'users.id', '=', 'interviews.jobseeker_id')
+        ->Join('interview_rounds', 'interview_rounds.id', '=', 'interviews.round_id')
+    
+        ->where('interviews.company_id', $auth->company_id)
+        ->where('interviews.status', 'Shortlisted')
+       ->whereDate('interviews.interview_date', $today)
+        ->where('jobs.status','Active')
+       // ->where('jobs.expiration_date','>=',date('Y-m-d'))
+        ->get();
+        if($today_interview)
+        {
+            return response()->json([
+                'status' => true,
+                'message' =>'Today Interview List.',
+                'data'=>$today_interview
+               
+            ]);
+        }else{
+            return response()->json([
+                'status' => true,
+                'message' =>'No any Interview.',
+                'data'=>[]
                
             ]);
         }

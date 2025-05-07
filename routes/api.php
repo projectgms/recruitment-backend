@@ -95,7 +95,8 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/update_job_application_notification',[CandidateController::class,'update_job_application_notification']);
 
         Route::post('recruiter/get_candidate_interview_status',[InterviewController::class,'get_candidate_interview_status']);
-                Route::post('recruiter/get_job_interview_status',[InterviewController::class,'get_job_interview_status']);
+        Route::post('recruiter/get_job_interview_status',[InterviewController::class,'get_job_interview_status']);
+        Route::post('recruiter/today_interview',[InterviewController::class,'today_interview']);
 
         Route::post('recruiter/update_candidate_interview_status',[InterviewController::class,'update_candidate_interview_status']);
 
