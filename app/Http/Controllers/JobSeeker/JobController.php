@@ -66,10 +66,12 @@ class JobController extends Controller
             'jobs.location as job_locations',
             'companies.company_logo',
             'companies.name as company_name',
-            'companies.locations as company_locations'
+            'companies.locations as company_locations',
+            'jobs.created_at'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
             ->where('jobs.status', 'Active')
+            //->where('jobs.expiration_date','>=',date('Y-m-d'))
             ->where(function ($query) use ($jobSeekerSkills) {
                 // Loop each skill for an OR condition (any match)
                 foreach ($jobSeekerSkills as $skill) {
@@ -82,7 +84,7 @@ class JobController extends Controller
                         }
                     }
                 }
-            })
+            })->orderBy('jobs.created_at','desc')
             ->get();
 
         // 5) Transform the company_logo into a full URL
@@ -100,6 +102,7 @@ class JobController extends Controller
              
             }
             $job->job_locations = json_decode($job->job_locations, true);
+               $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
         $save_job=SavedJob::select('id')->where('job_id','=',$job->id)->where('jobseeker_id',$auth->id)->first();
                 
                 if($save_job)
@@ -116,6 +119,7 @@ class JobController extends Controller
                 }else{
                     $job->job_application_status=false;
                 }
+             
             return $job;
         });
         return response()->json([
@@ -167,9 +171,11 @@ class JobController extends Controller
             'companies.company_logo',
             'companies.name as company_name',
             'companies.locations as company_locations',
-              'companies.company_description'
+              'companies.company_description',
+              'jobs.created_at'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
+         //   ->where('jobs.expiration_date','>=',date('Y-m-d'))
             ->where('jobs.status', 'Active');
 
         // 3) Add skill matching (case-insensitive) for any skill
@@ -236,7 +242,7 @@ class JobController extends Controller
         */
 
         // 5) Get the final list of jobs
-        $jobs = $jobsQuery->get();
+        $jobs = $jobsQuery->orderBy('jobs.created_at','desc')->get();
 
         $jobs->transform(function ($jobs) use ($auth) {
              $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
@@ -270,6 +276,8 @@ class JobController extends Controller
                 }else{
                     $jobs->job_application_status=false;
                 }
+                  $jobs->posted_time = Carbon::parse($jobs->created_at)->diffForHumans();
+
             return $jobs;
         });
 
@@ -431,8 +439,8 @@ class JobController extends Controller
         'jobs.experience_required',
     )
         ->where('jobs.status', 'Active')
-        ->where('jobs.id', $request->id);
-    
+        ->where('jobs.id', $request->id)
+->where('jobs.expiration_date','>=',date('Y-m-d'));
     // 3) Add experience condition (extract number from "7 years")
     $jobsQuery->whereRaw("CAST(REGEXP_SUBSTR(jobs.experience_required, '[0-9]+') AS UNSIGNED) <= ?", [$candidateExperience]);
     
@@ -786,4 +794,250 @@ class JobController extends Controller
                
             ]);
     }
+    
+    public function prepare_for_job(Request $request)
+    {
+          $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+          $validator = Validator::make($request->all(), [
+            'title' => 'required', 
+           
+        ], [
+            'title.required' => 'Title is required.',
+          
+        ]);
+        if($request->title=='jd')
+        {
+                      $validator = Validator::make($request->all(), [
+                    'id' => 'required', 
+                    'bash_id'=>'required',
+                        
+                    ], [
+                        'id.required' => 'Job Application Id is required.',
+                      
+                        'bash_id.required'=>'Bash Id is required'
+                      
+                    ]);
+                    
+                    $job_application = JobApplication::select('job_applications.job_seeker_id','jobs.job_title','jobs.location','jobs.job_description','jobs.responsibilities','jobs.skills_required','jobs.status','jobs.salary_range','jobs.industry','jobs.job_type','jobs.contact_email','jobs.experience_required','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time','job_applications.id as job_application_id','job_applications.resume_json', 'job_applications.status')
+                        ->Join('jobs', 'jobs.id', '=', 'job_applications.job_id')
+                       
+                        ->where('job_applications.bash_id', $request->bash_id)
+                        ->where('job_applications.id', $request->id)
+                        ->first();
+            
+                    if (!$job_application) {
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Resume not found',
+                        ], 404);
+                    }
+                    
+                  $jd=array("title"=>$job_application->job_title,
+         
+                   "locations"=>$job_application->location,
+                   "description"=>$job_application->job_description,
+                   "responsibilities"=>$job_application->responsibilities,
+                   "skills"=>$job_application->skills_required,
+                   "status"=>$job_application->status,
+                   "salary"=>$job_application->salary_range,
+                   "industries"=>$job_application->industry,
+                   "employmentType"=>$job_application->job_type,
+                   "email"=>$job_application->contact_email,
+                   "experience"=>$job_application->	experience_required,
+                   "hotJob"=>$job_application->is_hot_job,
+                   "expirationDate"=>$job_application->expiration_date,
+                   
+                   "expirationTime"=>$job_application->expiration_time
+                   );
+           
+                    $ch = curl_init();
+                        
+                     $resumeArray = is_string($job_application->resume_json)
+                        ? json_decode($job_application->resume_json, true)
+                        : $job_application->resume_json;
+                    
+                    $jsonData = [
+                        'jd' => $jd,
+                        'resume' => $resumeArray
+                    ];
+    
+           
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($jsonData), 
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/json', // This is CRITICAL
+                    ],
+                ]);
+                
+                $response = curl_exec($ch);
+                
+               
+           
+                if (curl_errno($ch)) {
+                     return response()->json([
+                    'status' => false,
+                    'message' =>curl_error($ch),
+                    
+                ]);
+                  
+                }
+              
+                 curl_close($ch);
+               $decoded = json_decode($response, true);
+                                        
+                if (isset($decoded['qa_output'])) {
+                    $decoded = $this->transformQaOutput($decoded['qa_output']);
+                    unset($decoded['qa_output']); // Optional: remove the raw string
+                }
+            
+                return response()->json([
+                    'status' => true,
+                    'message' =>'Candidate Analysis',
+                     'data'=>$decoded
+                ]);
+      
+        }else if($request->title=='resume')
+        {
+                    $validator = Validator::make($request->all(), [
+                        'bash_id' => 'required', 
+                       
+                        'id'=>'required',
+                       
+                    ], [
+                        'id.required' => ' Id is required.',
+                      
+                        'bash_id.required'=>'Bash Id is required'
+                      
+                    ]);
+        
+                     $resume = GenerateResume::select('id', 'bash_id', 'resume_name', 'resume_json')
+                    ->where('user_id', $auth->id)
+                    ->where('id', $request->id)
+                    ->where('bash_id', $request->bash_id)
+                    ->first();
+
+                    if (!$resume) {
+                        return response()->json([
+                            'status' => false,
+                            'message' => 'Resume not found',
+                        ], 404);
+                    }
+                    
+                     $ch = curl_init();
+                        curl_setopt_array($ch, [
+                            CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_POST => true,
+                            CURLOPT_POSTFIELDS => $resume->resume_json,
+                            CURLOPT_HTTPHEADER => [
+                                'Accept: application/json',
+                                'Content-Type: application/json',
+                            ],
+                        ]);
+                    
+                        $response = curl_exec($ch);
+                    
+                        if (curl_errno($ch)) {
+                            return response()->json([
+                                'status' => false,
+                                'message' => curl_error($ch),
+                            ]);
+                        }
+                    
+                        curl_close($ch);
+                    
+                        // Step 2: Decode and transform response
+                        $decoded = json_decode($response, true);
+                                                
+                        if (isset($decoded['qa_output'])) {
+                            $decoded = $this->transformQaOutput($decoded['qa_output']);
+                            unset($decoded['qa_output']); // Optional: remove the raw string
+                        }
+                         return response()->json([
+                                            'status' => true,
+                                            'message' =>'Candidate Analysis',
+                                             'data'=>$decoded
+                                        ]);
+        }
+        
+          if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+    }
+    
+    private function transformQaOutput($qaText)
+{
+    $lines = preg_split("/\r\n|\n|\r/", $qaText);
+    $qa = [];
+    $summary = '';
+    $currentQ = '';
+    $currentA = '';
+    $category = '';
+    $inSummary = true;
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+
+        // Skip empty lines
+        if ($line === '') continue;
+
+        // Section headings
+        if (preg_match('/^\*\*(.*?)\*\*$/', $line, $matches)) {
+            $category = $matches[1];
+            continue;
+        }
+
+        // Summary before questions
+        if ($inSummary && preg_match('/^\d+\.\s*Q:/', $line)) {
+            $inSummary = false; // questions are starting
+        }
+
+        if ($inSummary) {
+            $summary .= ' ' . $line;
+            continue;
+        }
+
+        if (preg_match('/^\d+\.\s*Q:\s*(.*)$/i', $line, $matches)) {
+            if ($currentQ && $currentA) {
+                $qa[] = [
+                    'question' => trim($currentQ),
+                    'answer' => trim($currentA),
+                    'category' => $category
+                ];
+                $currentA = '';
+            }
+            $currentQ = $matches[1];
+        } elseif (preg_match('/^A:\s*(.*)$/i', $line, $matches)) {
+            $currentA = $matches[1];
+        } elseif (!empty($line)) {
+            $currentA .= ' ' . $line;
+        }
+    }
+
+    // Push last Q&A
+    if ($currentQ && $currentA) {
+        $qa[] = [
+            'question' => trim($currentQ),
+            'answer' => trim($currentA),
+            'category' => $category
+        ];
+    }
+
+    return [
+        'summary' => trim($summary),
+        'qa' => $qa
+    ];
+}
+
 }

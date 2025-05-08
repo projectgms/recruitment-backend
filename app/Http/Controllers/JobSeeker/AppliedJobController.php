@@ -88,7 +88,7 @@ class AppliedJobController extends Controller
                 $roundIds = json_decode($job->round, true);
 
                 // Fetch interview round details
-                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date', 'interviews.interview_mode as mode')
+                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date','interviews.interview_link as link', 'interviews.interview_mode as mode')
 
                     ->leftJoin('interviews', function ($join) use ($job) {
                         // Apply the condition on the join to ensure left join behavior
@@ -97,7 +97,7 @@ class AppliedJobController extends Controller
                             ->where('interviews.jobseeker_id', $job->job_seeker_id);
                     })
                     ->whereIn('interview_rounds.id', $roundIds ?? [])
-
+                    ->orderByRaw('FIELD(interview_rounds.id, '.implode(',', $roundIds).')') 
                     ->get();
                     // ->map(function ($round) {
                     //     // If status is null, set to 'Pending'
@@ -159,11 +159,11 @@ class AppliedJobController extends Controller
             ->where('jobs.status', 'Active')
             ->where('jobs.active', '1')->first();
         if ($check_job) {
-            $check_test = Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id', $request->job_application_id)->where('company_id', $check_job->company_id)->where('round_id', $request->round_id)->count();
-            if ($check_test > 0) {
-                $test_status = true;
-            } else {
+            $check_test = Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id', $request->job_application_id)->where('company_id', $check_job->company_id)->where('status','Scheduled')->where('interview_link','<=',date('Y-m-d H:i:s'))->where('round_id', $request->round_id)->count();
+             if ($check_test > 0) {
                 $test_status = false;
+            } else {
+                $test_status = true;
             }
 
             $data = array(
@@ -175,9 +175,8 @@ class AppliedJobController extends Controller
                 'total_time' => '10 Mins'
             );
             return response()->json(['status' => true, 'message' => 'Mcq Interview Instrction', 'data' => $data]);
-        } else {
-
-            return response()->json([
+        }else{
+             return response()->json([
                 'status' => false,
                 'message' => 'Job Status not Active.',
                 'data' => []
@@ -217,7 +216,7 @@ class AppliedJobController extends Controller
         ->Join('job_applications','job_applications.job_seeker_id','=','job_seeker_contact_details.user_id')
         ->Join('jobs','jobs.id','=','job_applications.job_id')
         ->where('job_applications.job_seeker_id','=',$auth->id)
-        ->where('jobs.id',$request->job_id)
+            ->where('jobs.id',$request->job_id)
          ->where('job_applications.id',$request->job_application_id)
           ->where('job_applications.bash_id',$request->bash_id)
         ->first();
@@ -302,35 +301,16 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
-        $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
-        if ($check_test === 0) {
-
-            $test = new Interview();
-            $test->bash_id = Str::uuid();
-            $test->job_application_id = $request->job_application_id;
-            $test->jobseeker_id = $auth->id;
-             $test->company_id = $request->company_id;
-              $test->round_id = $request->round_id;
-          
-            $test->score = $request->score;
+         $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
+        if ($check_test>0)
+        {
+            $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
+             $test->score = $request->score;
             $test->total = $request->total;
-              $test->interview_date = date('Y-m-d H:i:s');
-                $test->interview_mode = 'Online';
+           
              $test->status = 'Completed';
-          
-
             $test->save();
-            return response()->json(['status' => true, 'message' => 'Test Submited.'], 200);
-        } else {
-
-            // $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
-            //  $test->score = $request->score;
-            // $test->total = $request->total;
-            //   $test->interview_date = date('Y-m-d H:i:s');
-            //     $test->interview_mode = 'Online';
-            //  $test->status = 'Completed';
-            // $test->save();
-            return response()->json(['status' => false, 'message' => 'already Submitted.']);
+            return response()->json(['status' => false, 'message' => ' Submitted.']);
         }
     }
     

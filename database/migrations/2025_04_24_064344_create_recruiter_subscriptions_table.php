@@ -20,11 +20,11 @@ return new class extends Migration
             $table->string('plan_name');
             $table->integer('amount');
             $table->string('plan_type');
-            $table->json('features');
+            $table->longText('features');
             $table->date('plan_purchase_date');
             $table->date('plan_expiry_date');
             $table->string('rayzorpay_order_id');
-            $table->string('rayzorpay_payment_id');
+            $table->string('rayzorpay_payment_id')->nullable();
             $table->string('status');
             $table->timestamps();
         });

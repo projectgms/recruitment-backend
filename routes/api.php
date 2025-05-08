@@ -64,6 +64,8 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/get_job_post_count',[JobPostController::class,'get_job_post_count']);
         Route::post('recruiter/salary_insights',[JobPostController::class,'salary_insights']);
         Route::get('recruiter/recent_job_post',[JobPostController::class,'recent_job_post']);
+        Route::post('recruiter/pin_job',[JobPostController::class,'pin_job']);
+        Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
 
 
 
@@ -86,13 +88,15 @@ Route::prefix('v1')->group(function () {
         
         Route::post('recruiter/update_filter_job_applicant',[CandidateController::class,'update_filter_job_applicant']);
         Route::post('open_to_work',[CandidateController::class,'open_to_work']);
+        Route::post('recruiter/smart_search_candidate',[CandidateController::class,'smart_search_candidate']);
         
          //Job Application Notification
         Route::post('recruiter/view_job_application_notification',[CandidateController::class,'view_job_application_notification']);
         Route::post('recruiter/update_job_application_notification',[CandidateController::class,'update_job_application_notification']);
 
         Route::post('recruiter/get_candidate_interview_status',[InterviewController::class,'get_candidate_interview_status']);
-                Route::post('recruiter/get_job_interview_status',[InterviewController::class,'get_job_interview_status']);
+        Route::post('recruiter/get_job_interview_status',[InterviewController::class,'get_job_interview_status']);
+        Route::post('recruiter/today_interview',[InterviewController::class,'today_interview']);
 
         Route::post('recruiter/update_candidate_interview_status',[InterviewController::class,'update_candidate_interview_status']);
 

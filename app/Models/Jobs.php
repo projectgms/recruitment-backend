@@ -29,6 +29,7 @@ class Jobs extends Model
         'expiration_date',
         'expiration_time',
         'responsibilities',
+        'is_pin',
         'status',
         'active'
     ];

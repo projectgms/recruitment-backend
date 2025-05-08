@@ -245,6 +245,14 @@ $user = $user->toArray();
                     "add" => 1,
                     "edit" => 1,
                     "delete" => 1
+                ],
+                [
+                    "id" => 8,
+                    "menu" => "smart-search",
+                    "view" => 1,
+                    "add" => 1,
+                    "edit" => 1,
+                    "delete" => 1
                 ]
             ];
             foreach ($permission_data as $permission) {

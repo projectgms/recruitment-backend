@@ -21,38 +21,58 @@ class CandidateSkillController extends Controller
 {
     //
 
-     public function get_candidate_skills()
-    {
-        $auth = JWTAuth::user();
-       
-        if (!$auth) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthorized',
-            ], 401);
-        }
+   public function get_candidate_skills(Request $request)
+{
+    $auth = JWTAuth::user();
 
-        $get_skills = JobSeekerProfessionalDetails::select('skills')
+    if (!$auth) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Unauthorized',
+        ], 401);
+    }
+
+    $get_skills = JobSeekerProfessionalDetails::select('skills')
         ->where('user_id', $auth->id)
         ->first();
-        if($get_skills)
-        {
-        // 1) If it's JSON, decode:
-        $jobSeekerSkills = json_decode($get_skills->skills, true);
+
+    if (!$get_skills || empty($get_skills->skills)) {
         return response()->json([
             'status' => true,
-            'message' => 'Candidate Skills.',
-            'data' => $jobSeekerSkills
+            'message' => 'No skills found.',
+            'data' => []
         ]);
-        }else{
-            return response()->json([
-                'status' => true,
-                'message' => 'Candidate Skills.',
-                'data' => []
-            ]);
-        }
-
     }
+
+    $jobSeekerSkills = json_decode($get_skills->skills, true);
+    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
+
+    $validSkills = [];
+
+    foreach ($jobSeekerSkills as $skill) {
+        $words = preg_split('/[\s,]+/', strtolower($skill));
+
+        $questionCount = SkillAssQuestion::
+            where(function ($query) use ($words, $stopWords) {
+                foreach ($words as $word) {
+                    if (!empty($word) && !in_array($word, $stopWords)) {
+                        $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                    }
+                }
+            })
+            ->count();
+
+        if ($questionCount >= 10) {
+            $validSkills[] = $skill;
+        }
+    }
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Candidate Skills.',
+        'data' => $validSkills
+    ]);
+}
 
    public function candidate_skill_test(Request $request)
     {
@@ -259,7 +279,7 @@ class CandidateSkillController extends Controller
 
     }
     
-    public function get_skill_test_score()
+     public function get_skill_test_score()
     {
         $auth = JWTAuth::user();
       

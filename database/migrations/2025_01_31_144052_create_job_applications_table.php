@@ -18,11 +18,12 @@ return new class extends Migration
                 $table->string('bash_id')->unique();
                 $table->integer('job_id');
                 $table->integer('job_seeker_id');
-                $table->integer('resume_id');
+                $table->integer('resume_id')->default(0);
                 $table->text('resume')->nullable();
                 $table->text('resume_json')->nullable();
                 $table->text('cover_letter')->nullable();
-                $table->string('status');
+                $table->string('status')->default('Applied');
+                $table->timestamp('applied_at')->useCurrent();
                  $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });

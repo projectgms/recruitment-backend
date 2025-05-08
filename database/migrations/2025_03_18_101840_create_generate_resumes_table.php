@@ -18,10 +18,10 @@ return new class extends Migration
             $table->integer('user_id');
             $table->integer('job_id')->default(0);
             $table->string('resume_name');
-            $table->string('resume');
-            $table->json('resume_json');
-              $table->string('is_ai_generated')->default(false);
-            $table->integer('active');
+            $table->string('resume')->nullable();
+            $table->longText('resume_json');
+              $table->string('is_ai_generated')->default('false');
+            $table->integer('active')->default(1);
             $table->string('status');
              $table->timestamp('created_at')->useCurrent();
              $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
