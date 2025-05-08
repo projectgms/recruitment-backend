@@ -18,10 +18,10 @@ return new class extends Migration
                 $table->string('bash_id')->unique();
                 $table->integer('user_id');
                 $table->string('name');
-                $table->string('website');
-                $table->string('industry');
-                $table->string('company_size');
-                $table->text('company_description');
+                $table->string('website')->nullable();
+                $table->string('industry')->nullable();
+                $table->string('company_size')->nullable();
+                $table->text('company_description')->nullable();
                 $table->longtext('locations')->nullable();
                 $table->longtext('company_logo')->nullable();
                 $table->longtext('social_profiles')->nullable();
@@ -29,7 +29,7 @@ return new class extends Migration
                 $table->string('instagram_url')->nullable();
                 $table->string('linkedin_url')->nullable();
                 $table->string('twitter_url')->nullable();
-                $table->string('status');
+                $table->string('status')->nullable();
                 $table->integer('active');
                  $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

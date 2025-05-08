@@ -16,14 +16,15 @@ return new class extends Migration
                 $table->id();
                 $table->integer('user_id');
                 $table->string('bash_id')->unique();
-                $table->json('educations');
-                $table->json('documents');
-                $table->json('publications');
-                $table->json('trainings');
-                $table->json('certifications');
+                $table->longText('educations')->nullable();
+                $table->longText('documents')->nullable();
+                $table->longText('publications')->nullable();
+                $table->longText('trainings')->nullable();
+                $table->longText('certifications')->nullable();
                  $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
+          
         }
     }
 

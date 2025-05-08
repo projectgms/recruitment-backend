@@ -18,9 +18,9 @@ return new class extends Migration
             $table->string('plan_name');
             $table->string('plan_type');
             $table->string('amount');
-            $table->json('features');
+            $table->longText('features');
             $table->string('status')->nullable();
-            $table->integer('active')->defalut(1);
+            $table->integer('active')->default(1);
             $table->timestamps();
         });
     }

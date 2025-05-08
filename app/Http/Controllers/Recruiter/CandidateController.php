@@ -238,11 +238,18 @@ class CandidateController extends Controller
             $location = strtolower($request->location);
             $query->orWhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
         }
-          if ($request->filled('experience')) {
-            // partial match, case-insensitive
-            $exp = strtolower($request->experience);
-            $query->orWhereRaw("LOWER(job_seeker_contact_details.total_year_exp) LIKE ?", ['%' . $exp . '%']);
-        }
+        if ($request->filled('min_experience') && $request->filled('max_experience')) {
+        $minExp = (int) $request->min_experience;
+        $maxExp = (int) $request->max_experience;
+    
+        $query->orWhereBetween('job_seeker_contact_details.total_year_exp', [$minExp, $maxExp]);
+    } elseif ($request->filled('min_experience')) {
+        $minExp = (int) $request->min_experience;
+        $query->orWhere('job_seeker_contact_details.total_year_exp', '>=', $minExp);
+    } elseif ($request->filled('max_experience')) {
+        $maxExp = (int) $request->max_experience;
+        $query->orWhere('job_seeker_contact_details.total_year_exp', '<=', $maxExp);
+    }
          
 
          $candidates=$query->get()->transform(function ($candidate) {
