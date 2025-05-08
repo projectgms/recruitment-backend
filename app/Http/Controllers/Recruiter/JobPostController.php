@@ -256,7 +256,7 @@ class JobPostController extends Controller
             return response()->json(['status' => false, 'message' => 'Job post already added']);
         }
     }
-    public function recent_job_post()
+  public function recent_job_post()
     {
         $auth = JWTAuth::user();
 
@@ -279,7 +279,7 @@ class JobPostController extends Controller
                         'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time',
                         'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
                     )
-                    ->join('companies', 'companies.id', '=', 'jobs.company_id')
+                    ->Join('companies', 'companies.id', '=', 'jobs.company_id')
                     ->where('jobs.company_id', $auth->company_id)
                     ->orderBy('jobs.created_at','desc')
                     ->limit(10)
@@ -359,7 +359,7 @@ class JobPostController extends Controller
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
                     ->where('jobs.company_id', $request->company_id)
-                    ->orderBy('jobs.created_at','desc')
+                       ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
                         $user = User::select('name')->where('id', $job->user_id)->first();
@@ -523,127 +523,127 @@ class JobPostController extends Controller
         }
     }
 
+public function pin_job(Request $request)
+{
+     $auth = JWTAuth::user();
 
-    public function pin_job(Request $request)
-    {
-         $auth = JWTAuth::user();
-    
-            if (!$auth) {
-                return response()->json(
-                    [
-                        'status' => false,
-                        'message' => 'Unauthorized',
-                    ],
-                    401
-                );
-            }
-            $validator = Validator::make($request->all(), [
-                'id'=>'required',
-                'company_id'=>'required',
-                'is_pin'=>'required'
-               
-            ], [
-                'id.required' => 'Id is required.',
-                'company_id.required'=>'required',
-            
-                'is_pin.required'=>'Is Pin required'
-            ]);
-            if ($validator->fails()) {
-                return response()->json([
+        if (!$auth) {
+            return response()->json(
+                [
                     'status' => false,
-                    'message' => $validator->errors(),
-    
-                ], 422);
-            }
-            
-              $jobs =Jobs::find($request->id);
-              
-               
-                $jobs->is_pin = $request->is_pin;
-                $jobs->save();
-             return response()->json(['status' => true, 'message' => ' Job Pin status Updated.'], 200);
-    }
-    
-    
-    public function get_pin_job(Request $request)
-    {
-          $auth = JWTAuth::user();
-    
-            if (!$auth) {
-                return response()->json(
-                    [
-                        'status' => false,
-                        'message' => 'Unauthorized',
-                    ],
-                    401
-                );
-            }
-    
-            $validator = Validator::make($request->all(), [
-                'company_id'=>'required',
-              
-    
-            ], [
-                'company_id.required' => 'Company Id is required.',
-              
-            ]);
-            if ($validator->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => $validator->errors(),
-    
-                ], 422);
-            }
-    
-               
-              
-            $job_post=Jobs::select(
-                            'jobs.user_id', 'jobs.id', 'jobs.round', 'jobs.bash_id', 'jobs.job_title',
-                            'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
-                            'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
-                            'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time','jobs.is_pin',
-                            'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
-                        )
-                        ->join('companies', 'companies.id', '=', 'jobs.company_id')
-                        ->where('jobs.company_id', $request->company_id)
-                          ->where('jobs.is_pin', 'Yes')
-                           ->orderBy('jobs.created_at','desc')
-                        ->get()
-                        ->map(function ($job) {
-                            $user = User::select('name')->where('id', $job->user_id)->first();
-                            return [
-                                'id' => $job->id,
-                                'bash_id' => $job->bash_id,
-                                'job_title' => $job->job_title,
-                                'job_description' => $job->job_description,
-                                'job_type' => $job->job_type,
-                                'location' => json_decode($job->location, true),
-                                'contact_email' => $job->contact_email,
-                                'salary_range' => $job->salary_range,
-                                'skills_required' => json_decode($job->skills_required, true),
-                                'industry' => json_decode($job->industry, true),
-                                'experience_required' => $job->experience_required,
-                                'round' => json_decode($job->round, true),
-                                'status' => $job->status,
-                                'is_hot_job' => $job->is_hot_job,
-                                'expiration_date' => $job->expiration_date,
-                                'expiration_time' => $job->expiration_time,
-                                  'is_pin' => $job->is_pin,
-                                'responsibilities' => $job->responsibilities,
-                                'created_at' => $job->created_at,
-                                'company_name' => $job->company_name,
-                                'company_id' => $job->company_id,
-                                'added_by' => $user ? $user->name : null
-                            ];
-                        });
-               
-    
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'id'=>'required',
+            'company_id'=>'required',
+            'is_pin'=>'required'
+           
+        ], [
+            'id.required' => 'Id is required.',
+            'company_id.required'=>'required',
+        
+            'is_pin.required'=>'Is Pin required'
+        ]);
+        if ($validator->fails()) {
             return response()->json([
-                'status' => true,
-                'message' => 'Get Job Posts.',
-                'data' => $job_post
-            ]);
-    }
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        
+          $jobs =Jobs::find($request->id);
+          
+           
+            $jobs->is_pin = $request->is_pin;
+            $jobs->save();
+         return response()->json(['status' => true, 'message' => ' Job Pin status Updated.'], 200);
+}
+
+
+public function get_pin_job(Request $request)
+{
+      $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+
+        $validator = Validator::make($request->all(), [
+            'company_id'=>'required',
+          
+
+        ], [
+            'company_id.required' => 'Company Id is required.',
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+           
+          
+        $job_post=Jobs::select(
+                        'jobs.user_id', 'jobs.id', 'jobs.round', 'jobs.bash_id', 'jobs.job_title',
+                        'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
+                        'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
+                        'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time','jobs.is_pin',
+                        'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
+                    )
+                    ->join('companies', 'companies.id', '=', 'jobs.company_id')
+                    ->where('jobs.company_id', $request->company_id)
+                      ->where('jobs.is_pin', 'Yes')
+                       ->orderBy('jobs.created_at','desc')
+                    ->get()
+                    ->map(function ($job) {
+                        $user = User::select('name')->where('id', $job->user_id)->first();
+                        return [
+                            'id' => $job->id,
+                            'bash_id' => $job->bash_id,
+                            'job_title' => $job->job_title,
+                            'job_description' => $job->job_description,
+                            'job_type' => $job->job_type,
+                            'location' => json_decode($job->location, true),
+                            'contact_email' => $job->contact_email,
+                            'salary_range' => $job->salary_range,
+                            'skills_required' => json_decode($job->skills_required, true),
+                            'industry' => json_decode($job->industry, true),
+                            'experience_required' => $job->experience_required,
+                            'round' => json_decode($job->round, true),
+                            'status' => $job->status,
+                            'is_hot_job' => $job->is_hot_job,
+                            'expiration_date' => $job->expiration_date,
+                            'expiration_time' => $job->expiration_time,
+                              'is_pin' => $job->is_pin,
+                            'responsibilities' => $job->responsibilities,
+                            'created_at' => $job->created_at,
+                            'company_name' => $job->company_name,
+                            'company_id' => $job->company_id,
+                            'added_by' => $user ? $user->name : null
+                        ];
+                    });
+           
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Get Job Posts.',
+            'data' => $job_post
+        ]);
+}
+
     public function delete_job_post(Request $request)
     {
         $auth = JWTAuth::user();

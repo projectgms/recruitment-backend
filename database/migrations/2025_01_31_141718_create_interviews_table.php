@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+     public function up(): void
     {
         if (!Schema::hasTable('interviews'))
         {
@@ -34,7 +34,6 @@ return new class extends Migration
             });
        }
     }
-
     /**
      * Reverse the migrations.
      */

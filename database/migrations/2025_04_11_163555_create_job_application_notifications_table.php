@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('type');
             $table->text('message');
             $table->integer('is_read');
-            $table->timestamp('created_at')->useCurrent();
+             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
     }

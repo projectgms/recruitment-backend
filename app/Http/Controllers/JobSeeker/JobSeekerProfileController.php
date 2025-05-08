@@ -1666,7 +1666,7 @@ $contact->work_status = $request->work_status;
                 "marksType" => $certification['marksType'] ? $certification['marksType'] : ' ',
                 "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : '0',
                 "max" => $certification['max'] ? $certification['max'] : '0',
-  "certificateLink"=>$certification['certificateLink']?$certification['certificateLink']:' ',
+                "certificateLink"=>$certification['certificateLink']?$certification['certificateLink']:'',
 
                 "skills" => $certification['skills'] ? $certification['skills'] : ' ',
                 "description" => $certification['description'] ? $certification['description'] : ' ',

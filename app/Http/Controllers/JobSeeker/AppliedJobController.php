@@ -159,24 +159,20 @@ class AppliedJobController extends Controller
             ->where('jobs.status', 'Active')
             ->where('jobs.active', '1')->first();
         if ($check_job) {
-            $check_test = Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id', $request->job_application_id)->where('company_id', $check_job->company_id)->where('status','Scheduled')->where('interview_link','<=',date('Y-m-d H:i:s'))->where('round_id', $request->round_id)->count();
-             if ($check_test > 0) {
-                $test_status = false;
-            } else {
-                $test_status = true;
-            }
+           
 
             $data = array(
                 'skill' => json_decode($check_job->skills_required),
                 'company_name' => $check_job->name,
                 'company_id' => $check_job->company_id,
-                'test_status' => $test_status,
+               
                 'total_question' => '10',
                 'total_time' => '10 Mins'
             );
             return response()->json(['status' => true, 'message' => 'Mcq Interview Instrction', 'data' => $data]);
         }else{
-             return response()->json([
+
+            return response()->json([
                 'status' => false,
                 'message' => 'Job Status not Active.',
                 'data' => []

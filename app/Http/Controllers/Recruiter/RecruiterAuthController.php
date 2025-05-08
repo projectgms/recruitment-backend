@@ -246,7 +246,7 @@ $user = $user->toArray();
                     "edit" => 1,
                     "delete" => 1
                 ],
-                [
+                  [
                     "id" => 8,
                     "menu" => "smart-search",
                     "view" => 1,

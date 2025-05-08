@@ -95,9 +95,9 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
        Route::post('jobseeker/get_job_round',[JobController::class,'get_job_round']);
-       Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
-       Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
-       Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
+     Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
+      Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
+      Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
 
 
        ///Skill Test

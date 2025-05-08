@@ -25,7 +25,8 @@ return new class extends Migration
                 $table->text('achievement')->nullable();
                 $table->text('awards')->nullable();
                 $table->text('hobbies')->nullable();
-                $table->text('extra_curricular')->nullable();
+                 $table->text('extra_curricular')->nullable();
+
 
                  $table->timestamp('created_at')->useCurrent();
                 $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();

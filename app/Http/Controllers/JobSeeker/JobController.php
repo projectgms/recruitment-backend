@@ -931,16 +931,27 @@ class JobController extends Controller
                     }
                     
                      $ch = curl_init();
-                        curl_setopt_array($ch, [
-                            CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
-                            CURLOPT_RETURNTRANSFER => true,
-                            CURLOPT_POST => true,
-                            CURLOPT_POSTFIELDS => $resume->resume_json,
-                            CURLOPT_HTTPHEADER => [
-                                'Accept: application/json',
-                                'Content-Type: application/json',
-                            ],
-                        ]);
+                     $resumeArray = is_string($resume->resume_json)
+                        ? json_decode($resume->resume_json, true)
+                        : $resume->resume_json;
+                    
+                    $jsonData = [
+                        'jd' => new \stdClass(),
+                        'resume' => $resumeArray
+                    ];
+    
+           
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($jsonData), 
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/json', // This is CRITICAL
+                    ],
+                ]);
+                
                     
                         $response = curl_exec($ch);
                     
