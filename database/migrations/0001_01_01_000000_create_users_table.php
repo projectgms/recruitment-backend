@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+   public function up(): void
     {
         if (!Schema::hasTable('users')) {
         Schema::create('users', function (Blueprint $table) {
@@ -45,7 +45,6 @@ return new class extends Migration
              $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
     }
- 
     if (!Schema::hasTable('sessions')) {
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
