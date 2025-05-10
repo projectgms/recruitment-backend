@@ -160,6 +160,262 @@ class CandidateController extends Controller
             'data' => $candidates
         ]);
     }
+      public function hired_application(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required',
+            'bash_id' => 'required',
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'bash_id.required' => 'Bash Id is required.',
+
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+      
+       
+            $candidates = JobApplication::select(
+                'users.open_to_work',
+                'users.name',
+                'users.first_name',
+                'users.middle_name',
+                'users.last_name',
+                'users.email',
+                'users.mobile',
+                'users.location',
+                'users.gender',
+                'users.dob',
+                'users.profile_picture',
+                'users.marital_status',
+                'users.medical_history',
+                'users.disability',
+                'users.language_known',
+                'job_applications.status as application_status',
+                'job_applications.id',
+                'job_applications.bash_id',
+                'job_applications.resume',
+                'job_applications.job_seeker_id',
+                'job_seeker_contact_details.country',
+                'job_seeker_contact_details.state',
+                'job_seeker_contact_details.city',
+                'job_seeker_contact_details.zipcode',
+                'job_seeker_contact_details.course',
+                'job_seeker_contact_details.primary_specialization',
+                'job_seeker_contact_details.dream_company',
+                'job_seeker_contact_details.total_year_exp',
+                'job_seeker_contact_details.total_month_exp',
+                'job_seeker_contact_details.secondary_mobile',
+                'job_seeker_contact_details.secondary_email',
+                'job_seeker_contact_details.linkedin_url',
+                'job_seeker_contact_details.github_url',
+                'jobseeker_education_details.certifications',
+                'jobseeker_education_details.publications',
+                'jobseeker_education_details.trainings',
+                'jobseeker_education_details.educations',
+                'jobseeker_professional_details.experience',
+                'jobseeker_professional_details.summary',
+                'jobseeker_professional_details.skills',
+                'jobseeker_professional_details.achievement',
+                'jobseeker_professional_details.extra_curricular',
+                'jobseeker_professional_details.projects',
+                'jobseeker_professional_details.internship'
+            )
+                ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
+                ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
+                ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+                ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+                ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+                ->where('jobs.id', $request->job_id)
+                ->where('jobs.bash_id', $request->bash_id)
+                ->where('job_applications.status','Hired')
+                ->get();
+
+            $disk = env('FILESYSTEM_DISK', 'local');
+            $urlPrefix = $disk === 's3' ? Storage::disk('s3') : Storage::disk('public');
+
+            $candidates->transform(function ($candidate) use ($disk, $urlPrefix) {
+                foreach (['certifications', 'publications', 'trainings', 'educations', 'experience', 'skills', 'projects', 'internship'] as $field) {
+                    $candidate->{$field} = json_decode($candidate->{$field}, true);
+                }
+
+                $candidate->open_to_work = $candidate->open_to_work == 1;
+
+                // Resume
+                if ($candidate->resume) {
+                    $candidate->resume = $disk === 's3'
+                        ? Storage::disk('s3')->url($candidate->resume)
+                        : env('APP_URL') . Storage::url('app/public/' . $candidate->resume);
+                }
+
+                // Profile Picture
+                if ($candidate->profile_picture) {
+                    $candidate->profile_picture = $disk === 's3'
+                        ? Storage::disk('s3')->url($candidate->profile_picture)
+                        : env('APP_URL') . Storage::url('app/public/' . $candidate->profile_picture);
+                }
+
+                // Skill Test
+                $candidate->skill_test = CandidateSkillTest::select('skill', 'score', 'total')
+                    ->where('jobseeker_id', $candidate->job_seeker_id)
+                    ->get();
+
+                return $candidate;
+            });
+
+          
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Candidate Information.',
+            'data' => $candidates
+        ]);
+    }
+      public function total_job_application(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required',
+            'bash_id' => 'required',
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'bash_id.required' => 'Bash Id is required.',
+
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+      
+       
+            $candidates = JobApplication::select(
+                'users.open_to_work',
+                'users.name',
+                'users.first_name',
+                'users.middle_name',
+                'users.last_name',
+                'users.email',
+                'users.mobile',
+                'users.location',
+                'users.gender',
+                'users.dob',
+                'users.profile_picture',
+                'users.marital_status',
+                'users.medical_history',
+                'users.disability',
+                'users.language_known',
+                'job_applications.status as application_status',
+                'job_applications.id',
+                'job_applications.bash_id',
+                'job_applications.resume',
+                'job_applications.job_seeker_id',
+                'job_seeker_contact_details.country',
+                'job_seeker_contact_details.state',
+                'job_seeker_contact_details.city',
+                'job_seeker_contact_details.zipcode',
+                'job_seeker_contact_details.course',
+                'job_seeker_contact_details.primary_specialization',
+                'job_seeker_contact_details.dream_company',
+                'job_seeker_contact_details.total_year_exp',
+                'job_seeker_contact_details.total_month_exp',
+                'job_seeker_contact_details.secondary_mobile',
+                'job_seeker_contact_details.secondary_email',
+                'job_seeker_contact_details.linkedin_url',
+                'job_seeker_contact_details.github_url',
+                'jobseeker_education_details.certifications',
+                'jobseeker_education_details.publications',
+                'jobseeker_education_details.trainings',
+                'jobseeker_education_details.educations',
+                'jobseeker_professional_details.experience',
+                'jobseeker_professional_details.summary',
+                'jobseeker_professional_details.skills',
+                'jobseeker_professional_details.achievement',
+                'jobseeker_professional_details.extra_curricular',
+                'jobseeker_professional_details.projects',
+                'jobseeker_professional_details.internship'
+            )
+                ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
+                ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
+                ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+                ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+                ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+                ->where('jobs.id', $request->job_id)
+                ->where('jobs.bash_id', $request->bash_id)
+               
+                ->get();
+
+            $disk = env('FILESYSTEM_DISK', 'local');
+            $urlPrefix = $disk === 's3' ? Storage::disk('s3') : Storage::disk('public');
+
+            $candidates->transform(function ($candidate) use ($disk, $urlPrefix) {
+                foreach (['certifications', 'publications', 'trainings', 'educations', 'experience', 'skills', 'projects', 'internship'] as $field) {
+                    $candidate->{$field} = json_decode($candidate->{$field}, true);
+                }
+
+                $candidate->open_to_work = $candidate->open_to_work == 1;
+
+                // Resume
+                if ($candidate->resume) {
+                    $candidate->resume = $disk === 's3'
+                        ? Storage::disk('s3')->url($candidate->resume)
+                        : env('APP_URL') . Storage::url('app/public/' . $candidate->resume);
+                }
+
+                // Profile Picture
+                if ($candidate->profile_picture) {
+                    $candidate->profile_picture = $disk === 's3'
+                        ? Storage::disk('s3')->url($candidate->profile_picture)
+                        : env('APP_URL') . Storage::url('app/public/' . $candidate->profile_picture);
+                }
+
+                // Skill Test
+                $candidate->skill_test = CandidateSkillTest::select('skill', 'score', 'total')
+                    ->where('jobseeker_id', $candidate->job_seeker_id)
+                    ->get();
+
+                return $candidate;
+            });
+
+          
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Candidate Information.',
+            'data' => $candidates
+        ]);
+    }
      public function smart_search_candidate(Request $request)
     {
         $auth = JWTAuth::user();
@@ -236,19 +492,19 @@ class CandidateController extends Controller
         if ($request->filled('location')) {
             // partial match, case-insensitive
             $location = strtolower($request->location);
-            $query->orWhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
+            $query->WhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
         }
         if ($request->filled('min_experience') && $request->filled('max_experience')) {
         $minExp = (int) $request->min_experience;
         $maxExp = (int) $request->max_experience;
     
-        $query->orWhereBetween('job_seeker_contact_details.total_year_exp', [$minExp, $maxExp]);
+        $query->WhereBetween('job_seeker_contact_details.total_year_exp', [$minExp, $maxExp]);
     } elseif ($request->filled('min_experience')) {
         $minExp = (int) $request->min_experience;
-        $query->orWhere('job_seeker_contact_details.total_year_exp', '>=', $minExp);
+        $query->Where('job_seeker_contact_details.total_year_exp', '>=', $minExp);
     } elseif ($request->filled('max_experience')) {
         $maxExp = (int) $request->max_experience;
-        $query->orWhere('job_seeker_contact_details.total_year_exp', '<=', $maxExp);
+        $query->Where('job_seeker_contact_details.total_year_exp', '<=', $maxExp);
     }
          
 
@@ -668,6 +924,183 @@ class CandidateController extends Controller
                 ]);
         }
             
+    }
+    
+     public function job_questions(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+        $validator = Validator::make($request->all(), [
+            'job_application_id' => 'required',
+            'job_id' => 'required'
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'job_application_id.required' => 'Job Application Id is required.',
+           
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $job_application = JobApplication::select('job_applications.job_seeker_id','jobs.job_title','jobs.location','jobs.job_description','jobs.responsibilities','jobs.skills_required','jobs.status','jobs.salary_range','jobs.industry','jobs.job_type','jobs.contact_email','jobs.experience_required','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time','job_applications.id as job_application_id','job_applications.resume_json', 'job_applications.status')
+        ->Join('jobs', 'jobs.id', '=', 'job_applications.job_id')
+       
+        ->where('job_applications.job_id', $request->job_id)
+        ->where('job_applications.id', $request->job_application_id)
+        ->first();
+
+            if (!$job_application) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Resume not found',
+                ], 404);
+            }
+            
+        $jd=array("title"=>$job_application->job_title,
+
+        "locations"=>$job_application->location,
+        "description"=>$job_application->job_description,
+        "responsibilities"=>$job_application->responsibilities,
+        "skills"=>$job_application->skills_required,
+        "status"=>$job_application->status,
+        "salary"=>$job_application->salary_range,
+        "industries"=>$job_application->industry,
+        "employmentType"=>$job_application->job_type,
+        "email"=>$job_application->contact_email,
+        "experience"=>$job_application->	experience_required,
+        "hotJob"=>$job_application->is_hot_job,
+        "expirationDate"=>$job_application->expiration_date,
+        
+        "expirationTime"=>$job_application->expiration_time
+        );
+
+            $ch = curl_init();
+                
+            $resumeArray = is_string($job_application->resume_json)
+                ? json_decode($job_application->resume_json, true)
+                : $job_application->resume_json;
+            
+            $jsonData = [
+                'jd' => $jd,
+                'resume' => $resumeArray
+            ];
+
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($jsonData), 
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/json', // This is CRITICAL
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+
+
+
+        if (curl_errno($ch)) {
+                return response()->json([
+                'status' => false,
+                'message' =>curl_error($ch),
+                
+            ]);
+  
+         }
+
+            curl_close($ch);
+            $decoded = json_decode($response, true);
+                                    
+            if (isset($decoded['qa_output'])) {
+                $decoded = $this->transformQaOutput($decoded['qa_output']);
+                unset($decoded['qa_output']); // Optional: remove the raw string
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' =>'Candidate Analysis',
+                'data'=>$decoded
+            ]);
+    }
+
+    private function transformQaOutput($qaText)
+    {
+        $lines = preg_split("/\r\n|\n|\r/", $qaText);
+        $qa = [];
+        $summary = '';
+        $currentQ = '';
+        $currentA = '';
+        $category = '';
+        $inSummary = true;
+    
+        foreach ($lines as $line) {
+            $line = trim($line);
+    
+            // Skip empty lines
+            if ($line === '') continue;
+    
+            // Section headings
+            if (preg_match('/^\*\*(.*?)\*\*$/', $line, $matches)) {
+                $category = $matches[1];
+                continue;
+            }
+    
+            // Summary before questions
+            if ($inSummary && preg_match('/^\d+\.\s*Q:/', $line)) {
+                $inSummary = false; // questions are starting
+            }
+    
+            if ($inSummary) {
+                $summary .= ' ' . $line;
+                continue;
+            }
+    
+            if (preg_match('/^\d+\.\s*Q:\s*(.*)$/i', $line, $matches)) {
+                if ($currentQ && $currentA) {
+                    $qa[] = [
+                        'question' => trim($currentQ),
+                        'answer' => trim($currentA),
+                        'category' => $category
+                    ];
+                    $currentA = '';
+                }
+                $currentQ = $matches[1];
+            } elseif (preg_match('/^A:\s*(.*)$/i', $line, $matches)) {
+                $currentA = $matches[1];
+            } elseif (!empty($line)) {
+                $currentA .= ' ' . $line;
+            }
+        }
+    
+        // Push last Q&A
+        if ($currentQ && $currentA) {
+            $qa[] = [
+                'question' => trim($currentQ),
+                'answer' => trim($currentA),
+                'category' => $category
+            ];
+        }
+    
+        return [
+            'summary' => trim($summary),
+            'qa' => $qa
+        ];
     }
     
    public function recent_application()

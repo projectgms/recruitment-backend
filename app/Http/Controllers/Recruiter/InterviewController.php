@@ -336,7 +336,7 @@ class InterviewController extends Controller
                         if($update_job_application)
                            {
                               JobApplication::where('id', $update_status->job_application_id)
-            ->update(['status' => $request->status]);
+                                ->update(['status' => $request->status]);
 
                            }
                         
