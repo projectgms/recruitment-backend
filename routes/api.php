@@ -82,15 +82,18 @@ Route::prefix('v1')->group(function () {
         Route::post('delete_user', [RolePermissionController::class, 'delete_user']);
 
         Route::post('job_applicant',[CandidateController::class,'job_applicant']);
+        Route::post('recruiter/total_job_application',[CandidateController::class,'total_job_application']);
+        Route::post('recruiter/hired_application',[CandidateController::class,'hired_application']);
         Route::get('recruiter/recent_application',[CandidateController::class,'recent_application']);
 
         Route::post('recruiter/candidate_analysis_by_jd',[CandidateController::class,'candidate_analysis_by_jd']);
+        Route::post('recruiter/job_questions',[CandidateController::class,'job_questions']);
 
         
         Route::post('recruiter/update_filter_job_applicant',[CandidateController::class,'update_filter_job_applicant']);
         Route::post('recruiter/update_filter_job_applicant_test',[CandidateController::class,'update_filter_job_applicant_test']);
         Route::post('open_to_work',[CandidateController::class,'open_to_work']);
-                Route::post('recruiter/smart_search_candidate',[CandidateController::class,'smart_search_candidate']);
+        Route::post('recruiter/smart_search_candidate',[CandidateController::class,'smart_search_candidate']);
 
          //Job Application Notification
         Route::post('recruiter/view_job_application_notification',[CandidateController::class,'view_job_application_notification']);

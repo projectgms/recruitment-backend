@@ -605,8 +605,8 @@ public function get_pin_job(Request $request)
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
                     ->where('jobs.company_id', $request->company_id)
-                      ->where('jobs.is_pin', 'Yes')
-                       ->orderBy('jobs.created_at','desc')
+                    ->where('jobs.is_pin', 'Yes')
+                    ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
                         $user = User::select('name')->where('id', $job->user_id)->first();
