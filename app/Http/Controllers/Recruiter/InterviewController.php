@@ -24,6 +24,8 @@ use App\Models\InterviewRound;
 
 use App\Models\SkillAssQuestion;
 use Illuminate\Support\Facades\Cache;
+ use Twilio\Rest\Client;
+
 
 use Illuminate\Support\Facades\Hash;
 
@@ -230,152 +232,6 @@ class InterviewController extends Controller
     ]);
     }
     
-    public function update_candidate_interview_status_bk(Request $request)
-    {
-        $auth = JWTAuth::user();
-
-        if (!$auth) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Unauthorized',
-            ], 401);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'id' => 'array|required',
-            'status'=>'required',
-            'round_id'=>'required'
-            
-        ], [
-            'id.required' => 'Id is required.',
-            'status.required'=>'Status is required.',
-            'round_id.required'=>'Round Id is required',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors(),
-
-            ], 422);
-        }
-       
-        $interview =Interview::whereIn('id',$request->id)->where('round_id',$request->round_id)->get();
-        if($interview)
-          {
-               foreach ($interview as $interview) {
-
-                $update_status = Interview::where('id', $interview->id)->where('round_id',$request->round_id)
-                  
-                    ->first();
-          if($update_status)
-          {
-            
-                $update_job_application = JobApplication::select('users.name','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
-                    ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
-                    ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
-                   ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
-                   
-                    ->where('job_applications.id', $update_status->job_application_id)
-                    ->where('jobs.status','Active')
-                    ->first();
-                 
-              if($update_job_application)
-              {
-                if ($request->status!='Selected') {
-                     
-                         //update current round interview status 
-                          if($request->status=='Scheduled')
-                          {
-                               $update_status->interview_mode = $request->interview_mode;
-                               $update_status->interview_date = $request->interview_date;
-                               $update_status->interview_link = $request->interview_link;
-                          }
-                           $update_status->status = $request->status;
-                           $update_status->save();
-                           
-                           //Update Job Application status
-                           if($update_job_application)
-                           {
-                            JobApplication::where('id', $update_status->job_application_id)
-                             ->update(['status' => $request->status]);
-
-                   
-                           }
-                   
-                }else{
-                    $rounds = json_decode($update_job_application->round); // e.g., ["2","1","3"]
-                    $currentIndex = array_search($request->round_id, $rounds);
-                    
-                    $nextRoundId = null;
-                    if ($currentIndex !== false && isset($rounds[$currentIndex + 1])) {
-                        $nextRoundId = $rounds[$currentIndex + 1];
-                    }
-                      //update current round interview status to Selected
-                        $update_status->status = $request->status;
-                       $update_status->save();
-                    if($nextRoundId)
-                    {
-                      
-                       
-                       //add entry for new Interview round 
-                      
-                        $insert_new_round = new Interview();
-                        $insert_new_round->bash_id = Str::uuid();
-                        $insert_new_round->job_application_id = $update_status->job_application_id;
-                        $insert_new_round->jobseeker_id =$update_status->jobseeker_id;
-                        $insert_new_round->company_id =$update_status->company_id;
-                        $insert_new_round->round_id = $nextRoundId;
-                        $insert_new_round->score = 0;
-                        $insert_new_round->total =10;
-                        $insert_new_round->interview_date = null;
-                        $insert_new_round->interview_mode = '';
-                        $insert_new_round->status = 'Shortlisted';
-                        $insert_new_round->save();
-                        
-                        //Update Job Application status
-                        if($update_job_application)
-                           {
-                              JobApplication::where('id', $update_status->job_application_id)
-                                ->update(['status' => $request->status]);
-
-                           }
-                        
-                    }else{
-                        // return response()->json([
-                        //     'status' => false,
-                        //     'message' =>'Next Round Id not found.',
-                           
-                        // ]);  
-                    }
-                }
-                 $get_round_name=InterviewRound::select('round_name')->where('id',$request->round_id)->first();
-           
-                        Notification::route('mail', $update_job_application->email)->notify(new UpdateJobApplication($update_job_application->name, $update_job_application->job_title, $update_job_application->company_name, $update_job_application->website, $request->status,$get_round_name->round_name,$update_status->interview_date,$update_status->interview_mode,$update_status->interview_link));
-                    
-              }else{
-                    return response()->json([
-                            'status' => false,
-                            'message' =>'This Job not Active.',
-                           
-                        ]);  
-              }
-          }
-            }
-     
-        return response()->json([
-            'status' => true,
-            'message' =>'Interview Round Status Updated for particular status.',
-           
-        ]);
-        }else{
-            return response()->json([
-                'status' => true,
-                'message' =>'Interview Id not found.',
-               
-            ]);
-        }
-    }
-    
       public function update_candidate_interview_status(Request $request)
     {
         $auth = JWTAuth::user();
@@ -416,7 +272,7 @@ class InterviewController extends Controller
           if($update_status)
           {
             
-                $update_job_application = JobApplication::select('users.name','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
+                $update_job_application = JobApplication::select('users.name','users.mobile','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
                     ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
                     ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
                    ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
@@ -513,8 +369,8 @@ class InterviewController extends Controller
                            }
                 }
                  $get_round_name=InterviewRound::select('round_name')->where('id',$request->round_id)->first();
-           
-                        Notification::route('mail', $update_job_application->email)->notify(new UpdateJobApplication($update_job_application->name, $update_job_application->job_title, $update_job_application->company_name, $update_job_application->website, $request->status,$get_round_name->round_name,$update_status->interview_date,$update_status->interview_mode,$update_status->interview_link));
+         
+                        Notification::route('mail', $update_job_application->email)->notify(new UpdateJobApplication($update_job_application->name, $update_job_application->job_title, $update_job_application->company_name, $update_job_application->website, $request->status,$get_round_name->round_name,$update_status->interview_date,$update_status->interview_mode,$update_status->interview_link,$update_job_application->mobile));
                     
               }else{
                     return response()->json([

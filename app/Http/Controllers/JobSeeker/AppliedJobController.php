@@ -236,7 +236,7 @@ class AppliedJobController extends Controller
                 }
             
                 // Fetch questions matching any of the required skills at the appropriate level
-                $get_que = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'correct_answer', 'marks')
+                $get_que = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
                     ->where('skill_level', $level)
                     ->where(function ($query) use ($skills) {
                         foreach ($skills as $skill) {
@@ -263,7 +263,7 @@ class AppliedJobController extends Controller
         }
     }
     
-      public function submit_mcq_interview_questions(Request $request)
+       public function submit_mcq_interview_questions(Request $request)
     {
          $auth = JWTAuth::user();
        
@@ -278,16 +278,15 @@ class AppliedJobController extends Controller
             'job_application_id' => 'required',
             'company_id'=>'required',
             'round_id' => 'required',
-            'score'=>'required',
-            'total'=>'required'
+            'answers'=>'array|required',
+            
             
         ], [
             'job_application_id.required' => 'Job Application Id is required.',
             'company_id.required'=>'Company Id is required.',
             'round_id.required' => 'Round Id is required',
-            'score.required'=>'Score is required',
-            'total.required'=>'Total marks required'
-           
+            'answers.required'=>'answers is required',
+            
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -297,16 +296,46 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
+        $answers = [];
+    $score=0;
+    $total=0;
+        // Handle file uploads
+        $i = 1;
+        foreach ($request->answers as $key => $answer) {
+            $get_que=SkillAssQuestion::select('correct_answer','marks')->where('id',$answer['id'])->where('question',$answer['question'])->first();
+            // Store JSON data with updated file path
+            $total += $get_que->marks; 
+             if ($answer['answer'] == $get_que->correct_answer) 
+             {
+                    $valid_answer = true;
+                    $score += $get_que->marks;  // Add marks if the answer is correct
+            }
+            $answers[] = [
+               
+                "id" => $answer['id'] ? $answer['id'] : null,
+                "question" => $answer['question'] ? $answer['question'] : null,
+                "answer" => $answer['answer'] ? $answer['answer'] : null,
+                "correct_answer" => $get_que->correct_answer ? $get_que->correct_answer : null,
+                
+            ];
+            $i++;
+        }
+        
          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
         if ($check_test>0)
         {
             $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
-             $test->score = $request->score;
-            $test->total = $request->total;
+             $test->score = $score;
+            $test->total = $total;
            
              $test->status = 'Completed';
             $test->save();
-            return response()->json(['status' => false, 'message' => ' Submitted.']);
+               $jsonData = [
+                'valid_answer' =>$answers,
+                'score' => $score,
+                 'total'=>$total
+            ];
+            return response()->json(['status' => true, 'data'=>$jsonData,'message' => ' Submitted.']);
         }
     }
     

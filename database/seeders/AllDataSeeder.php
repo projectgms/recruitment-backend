@@ -22,6 +22,11 @@ class AllDataSeeder extends Seeder
             'round_name' => 'MCQ Test',
            
         ],
+         [
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'Mock Interview',
+           
+        ],
         [
             'bash_id'=>Str::uuid(),
             'round_name' => 'Technical Test',

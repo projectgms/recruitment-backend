@@ -161,7 +161,7 @@ class CandidateSkillController extends Controller
          
             if($get_experience->total_year_exp<=1)
             {
-                $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
+                $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','marks')
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                 ->where('skill_level','Basic')
                  ->where(function ($query) use ($request) {
@@ -182,7 +182,7 @@ class CandidateSkillController extends Controller
                 ->get();
             }else if($get_experience->total_year_exp>1 && $get_experience->total_year_exp<=6)
             {
-                $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
+                $get_que=SkillAssQuestion::select('id','skill_level','question','option1','option2','option3','option4','marks')
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                 ->where('skill_level','Medium')
                 ->where(function ($query) use ($request) {
@@ -200,7 +200,7 @@ class CandidateSkillController extends Controller
                 ->get();
             }else{
              
-                $get_que=SkillAssQuestion::select('id','skill','skill_level','question','option1','option2','option3','option4','correct_answer','marks')
+                $get_que=SkillAssQuestion::select('id','skill','skill_level','question','option1','option2','option3','option4','marks')
                
                 ->addSelect(DB::raw("'" . $request->skill . "' as skill"))
                  ->where('skill_level','High')
@@ -225,7 +225,7 @@ class CandidateSkillController extends Controller
         }
     }
 
-    public function submit_candidate_skill_test(Request $request)
+  public function submit_candidate_skill_test(Request $request)
     {
         $auth = JWTAuth::user();
       
@@ -237,13 +237,13 @@ class CandidateSkillController extends Controller
         }
         $validator = Validator::make($request->all(), [
             'skill' => 'required',
-            'score'=>'required',
-            'total'=>'required'
+            'answers'=>'array|required',
+           
           
         ], [
             'skill.required' => 'Skill is required.',
-            'score.required'=>'Score is required.',
-            'total.required'=>'Total Marks is required.'
+            'answers.required'=>'answers is required.',
+            
           
         ]);
         if ($validator->fails()) {
@@ -253,6 +253,30 @@ class CandidateSkillController extends Controller
 
             ], 422);
         }
+  $answers = [];
+    $score=0;
+    $total=0;
+        // Handle file uploads
+        $i = 1;
+        foreach ($request->answers as $key => $answer) {
+            $get_que=SkillAssQuestion::select('correct_answer','marks')->where('id',$answer['id'])->where('question',$answer['question'])->first();
+            // Store JSON data with updated file path
+            $total += $get_que->marks; 
+             if ($answer['answer'] == $get_que->correct_answer) 
+             {
+                    $valid_answer = true;
+                    $score += $get_que->marks;  // Add marks if the answer is correct
+            }
+            $answers[] = [
+               
+                "id" => $answer['id'] ? $answer['id'] : null,
+                "question" => $answer['question'] ? $answer['question'] : null,
+                "answer" => $answer['answer'] ? $answer['answer'] : null,
+                "correct_answer" => $get_que->correct_answer ? $get_que->correct_answer : null,
+                
+            ];
+            $i++;
+        }
 
         $check_test= CandidateSkillTest::where('jobseeker_id', '=', $auth->id)->where('skill',$request->skill)->count();
         if ($check_test == 0) {
@@ -261,20 +285,30 @@ class CandidateSkillController extends Controller
             $test->bash_id = Str::uuid();
             $test->jobseeker_id = $auth->id;
             $test->skill = $request->skill;
-            $test->score = $request->score;
-            $test->total = $request->total;
+            $test->score = $score;
+            $test->total = $total;
           
 
             $test->save();
-            return response()->json(['status' => true, 'message' => 'Test Submited.'], 200);
+                $jsonData = [
+                'valid_answer' =>$answers,
+                'score' => $score,
+                 'total'=>$total
+            ];
+            return response()->json(['status' => true,'data'=>$jsonData,'message' => 'Test Submited.'], 200);
         } else {
 
             $test= CandidateSkillTest::where('jobseeker_id', '=', $auth->id)->where('skill',$request->skill)->first();
             $test->skill = $request->skill;
-            $test->score = $request->score;
-            $test->total = $request->total;
+            $test->score = $score;
+            $test->total = $total;
             $test->save();
-            return response()->json(['status' => true, 'message' => 'Retest Submitted.'], 200);
+              $jsonData = [
+                'valid_answer' =>$answers,
+                'score' => $score,
+                 'total'=>$total
+            ];
+            return response()->json(['status' => true,'data'=>$jsonData, 'message' => 'Retest Submitted.'], 200);
         }
 
     }

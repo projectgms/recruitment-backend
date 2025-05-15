@@ -6,6 +6,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Models\Jobs;
+use Twilio\Rest\Client;
 
 class UpdateJobApplication extends Notification
 {
@@ -16,13 +17,14 @@ class UpdateJobApplication extends Notification
   protected $candidate_email;
   protected $application_id;
   protected $dashboard_link;
+  protected $recruiter_mobile;
 
-  public function __construct($candidate_name, $job_title, $candidate_email)
+  public function __construct($candidate_name, $job_title, $candidate_email,$recruiter_mobile)
   {
       $this->candidate_name = $candidate_name;
       $this->job_title = $job_title;
       $this->candidate_email = $candidate_email;
-    
+      $this->recruiter_mobile=$recruiter_mobile;
   }
 
   /**
@@ -38,6 +40,29 @@ class UpdateJobApplication extends Notification
    */
   public function toMail(object $notifiable): MailMessage
   {
+   $whatsappMessage ="Hello,";
+         $whatsappMessage .="\nYou’ve received a new job application.";
+         $whatsappMessage .="\n**Candidate:** {$this->candidate_name}";
+         $whatsappMessage .="\n**Position:** {$this->job_title}";
+         $whatsappMessage .="\nLogin to your dashboard to view the full application details.";
+         $whatsappMessage .="\nThank you for using our platform!";
+      try {
+            $sid = env('TWILIO_SID');
+            $token = env('TWILIO_AUTH_TOKEN');
+            $from = env('TWILIO_WHATSAPP_FROM');
+
+            $twilio = new Client($sid, $token);
+
+            $twilio->messages->create(
+                "whatsapp:+91{$this->recruiter_mobile}",
+                [
+                    "from" => $from,
+                    "body" => $whatsappMessage
+                ]
+            );
+        } catch (\Exception $e) {
+          //  \Log::error('WhatsApp message failed: ' . $e->getMessage());
+        }
       return (new MailMessage)
           ->subject("New Application for {$this->job_title}")
           ->greeting("Hello ,")

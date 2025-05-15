@@ -15,7 +15,7 @@ use App\Models\GenerateResume;
 use App\Models\InterviewRound;
 use App\Models\Company;
 use App\Models\SavedJob;
-
+use App\Models\JobseekerPrepareJob;
 use App\Models\JobPostNotification;
 use App\Models\JobPostNotificationStatus;
 
@@ -62,16 +62,17 @@ class JobController extends Controller
                     'jobs.skills_required',
             'jobs.salary_range',
             'jobs.job_description',
-            'jobs.is_hot_job',
+         
             'jobs.location as job_locations',
             'companies.company_logo',
             'companies.name as company_name',
             'companies.locations as company_locations',
-            'jobs.created_at'
+            'jobs.created_at',
+            'jobs.expiration_date'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
             ->where('jobs.status', 'Active')
-            //->where('jobs.expiration_date','>=',date('Y-m-d'))
+            ->where('jobs.expiration_date','>=',date('Y-m-d'))
             ->where(function ($query) use ($jobSeekerSkills) {
                 // Loop each skill for an OR condition (any match)
                 foreach ($jobSeekerSkills as $skill) {
@@ -101,10 +102,16 @@ class JobController extends Controller
                 }
              
             }
-            $job->job_locations = json_decode($job->job_locations, true);
+              $job->job_locations = json_decode($job->job_locations, true);
                $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
-        $save_job=SavedJob::select('id')->where('job_id','=',$job->id)->where('jobseeker_id',$auth->id)->first();
+                $save_job=SavedJob::select('id')->where('job_id','=',$job->id)->where('jobseeker_id',$auth->id)->first();
+               
+                $expirationDate = Carbon::parse($job->expiration_date)->startOfDay();
+                $currentDate = Carbon::now()->startOfDay();
                 
+                $daysDifference = $currentDate->diffInDays($expirationDate, false); 
+                   $job->is_hot_job= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
+
                 if($save_job)
                 {
                     $job->is_saved_job=true;
@@ -162,7 +169,8 @@ class JobController extends Controller
             'jobs.experience_required',
             'jobs.salary_range',
             'jobs.job_description',
-            'jobs.is_hot_job',
+            //'jobs.is_hot_job',
+               'jobs.expiration_date',
             'jobs.location as job_locations',
             'jobs.responsibilities',
             'jobs.skills_required',
@@ -175,7 +183,7 @@ class JobController extends Controller
               'jobs.created_at'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
-         //   ->where('jobs.expiration_date','>=',date('Y-m-d'))
+            ->where('jobs.expiration_date','>=',date('Y-m-d'))
             ->where('jobs.status', 'Active');
 
         // 3) Add skill matching (case-insensitive) for any skill
@@ -212,10 +220,18 @@ class JobController extends Controller
         }
 
         // Filter by salary_range (minimum salary)
-        if ($request->filled('minSalary') && $request->filled('maxSalary')) {
+         if ($request->filled('minSalary') && $request->filled('maxSalary')) {
+           $min = (int) $request->minSalary;
+            $max = (int) $request->maxSalary;
         
-            $jobsQuery->where('jobs.salary_range', '>=', $request->minSalary)->where('jobs.salary_range','<=',$request->maxSalary);
+            $jobsQuery->whereRaw("
+                CAST(SUBSTRING_INDEX(jobs.salary_range, '-', 1) AS UNSIGNED) <= ?
+                AND
+                CAST(SUBSTRING_INDEX(jobs.salary_range, '-', -1) AS UNSIGNED) >= ?
+            ", [$max, $min]);
+           // $jobsQuery->where('jobs.salary_range', '>=', $request->minSalary)->where('jobs.salary_range','<=',$request->maxSalary);
           }
+
 
         // Filter by city or country (assuming both stored in companies.locations as text)
         // If you have city or country separately, adjust accordingly.
@@ -224,11 +240,11 @@ class JobController extends Controller
             $location = strtolower($request->location);
             $jobsQuery->whereRaw("LOWER(jobs.location) LIKE ?", ['%' . $location . '%']);
         }
-        if ($request->filled('is_hot_job')) {
-            // partial match, case-insensitive
+        // if ($request->filled('is_hot_job')) {
+        //     // partial match, case-insensitive
          
-            $jobsQuery->whereRaw("LOWER(jobs.is_hot_job) LIKE ?", ['%' . $request->is_hot_job . '%']);
-        }
+        //     $jobsQuery->whereRaw("LOWER(jobs.is_hot_job) LIKE ?", ['%' . $request->is_hot_job . '%']);
+        // }
         // If you want separate filters for 'city' and 'country', do something like:
         /*
         if ($request->filled('city')) {
@@ -261,6 +277,12 @@ class JobController extends Controller
                 $jobs->industry = json_decode($jobs->industry, true);
                 $jobs->company_locations = json_decode($jobs->company_locations, true);
                 $jobs->job_locations = json_decode($jobs->job_locations, true);
+                 $expirationDate = Carbon::parse($jobs->expiration_date)->startOfDay();
+                $currentDate = Carbon::now()->startOfDay();
+                
+                $daysDifference = $currentDate->diffInDays($expirationDate, false); 
+                   $jobs->is_hot_job= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
+
          $save_job=SavedJob::select('id')->where('job_id','=',$jobs->id)->where('jobseeker_id',$auth->id)->first();
                 
                 if($save_job)
@@ -280,6 +302,19 @@ class JobController extends Controller
 
             return $jobs;
         });
+        if ($request->filled('is_hot_job')) {
+    $hotJobFilter = strtolower($request->is_hot_job);
+
+    if ($hotJobFilter === 'yes') {
+        $jobs = $jobs->filter(function ($job) {
+            return $job->is_hot_job === 'Yes';
+        })->values();
+    } elseif ($hotJobFilter === 'no') {
+        $jobs = $jobs->filter(function ($job) {
+            return $job->is_hot_job === 'No';
+        })->values();
+    }
+}
 
         return response()->json([
             'status' => true,
@@ -498,7 +533,8 @@ class JobController extends Controller
       $apply->resume=$resume_url;
       $apply->resume_json=$resume_json;
       $apply->save();
-      Notification::route('mail', $matchingJobs->contact_email)->notify(new UpdateJobApplication($auth->name, $matchingJobs->job_title, $auth->email));
+       $get_recruiter_contact=Company::select('users.mobile')->Join('jobs','jobs.company_id','=','company.id')->Join('users','users.id','=','company.user_id')->where('jobs.id',$matchingJobs->id)->first();
+      Notification::route('mail', $matchingJobs->contact_email)->notify(new UpdateJobApplication($auth->name, $matchingJobs->job_title, $auth->email,$get_recruiter_contact->mobile));
     
      $job_application_notification=new JobApplicationNotification();
       $job_application_notification->bash_id = Str::uuid();
@@ -677,6 +713,7 @@ class JobController extends Controller
                 }else{
                      $job->company_logo=null;
                 }
+                 $job->posted_time  = Carbon::parse($job->job_post_date)->diffForHumans();
                 $job->job_locations = json_decode($job->job_locations, true);
                 $job->company_locations = json_decode($job->company_locations, true);
         
@@ -795,7 +832,7 @@ class JobController extends Controller
             ]);
     }
     
-    public function prepare_for_job(Request $request)
+       public function prepare_for_job(Request $request)
     {
           $auth = JWTAuth::user();
         if (!$auth) {
@@ -852,7 +889,19 @@ class JobController extends Controller
                    
                    "expirationTime"=>$job_application->expiration_time
                    );
-           
+            $check_prepare_job = JobseekerPrepareJob::select('qa_output')->where('job_application_id', $request->id)
+                ->where('jobseeker_id', $auth->id)
+                ->where('title','jd')
+                ->first();
+        
+            if ($check_prepare_job) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Already Prepare',
+                    'data' =>json_decode($check_prepare_job->qa_output), 
+                ]);
+            }
+
                     $ch = curl_init();
                         
                      $resumeArray = is_string($job_application->resume_json)
@@ -896,7 +945,14 @@ class JobController extends Controller
                     $decoded = $this->transformQaOutput($decoded['qa_output']);
                     unset($decoded['qa_output']); // Optional: remove the raw string
                 }
-            
+               $ai = new JobseekerPrepareJob();
+                $ai->bash_id = Str::uuid();
+                $ai->jobseeker_id = $auth->id;
+                $ai->title='jd';
+                $ai->job_application_id = $request->id;
+                $ai->qa_output = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $ai->save();
+
                 return response()->json([
                     'status' => true,
                     'message' =>'Candidate Analysis',
@@ -929,7 +985,18 @@ class JobController extends Controller
                             'message' => 'Resume not found',
                         ], 404);
                     }
-                    
+                     $check_prepare_job = JobseekerPrepareJob::select('qa_output')->where('generate_resume_id', $request->id)
+                ->where('jobseeker_id', $auth->id)
+                ->where('title','resume')
+                ->first();
+        
+            if ($check_prepare_job) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Already Prepare',
+                    'data' =>json_decode($check_prepare_job->qa_output), 
+                ]);
+            }
                      $ch = curl_init();
                      $resumeArray = is_string($resume->resume_json)
                         ? json_decode($resume->resume_json, true)
@@ -971,6 +1038,15 @@ class JobController extends Controller
                             $decoded = $this->transformQaOutput($decoded['qa_output']);
                             unset($decoded['qa_output']); // Optional: remove the raw string
                         }
+                        
+                          $ai = new JobseekerPrepareJob();
+                $ai->bash_id = Str::uuid();
+                $ai->title='resume';
+                $ai->jobseeker_id = $auth->id;
+                $ai->generate_resume_id = $request->id;
+                $ai->qa_output = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $ai->save();
+
                          return response()->json([
                                             'status' => true,
                                             'message' =>'Candidate Analysis',
@@ -986,6 +1062,7 @@ class JobController extends Controller
             ], 422);
         }
     }
+    
     
     private function transformQaOutput($qaText)
 {

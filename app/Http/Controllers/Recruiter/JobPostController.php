@@ -141,7 +141,7 @@ class JobPostController extends Controller
             'skills_required' => 'array|required',
             'status' => 'required',
             'salary_range' => 'required',
-            'is_hot_job' => 'required',
+          //  'is_hot_job' => 'required',
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
@@ -237,7 +237,7 @@ class JobPostController extends Controller
 
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
-            $jobs->is_hot_job = $request->is_hot_job;
+         //   $jobs->is_hot_job = $request->is_hot_job;
             $jobs->expiration_date = $request->expiration_date;
             $jobs->expiration_time = $request->expiration_time;
             $jobs->responsibilities = $request->responsibilities;
@@ -354,7 +354,7 @@ class JobPostController extends Controller
                         'jobs.user_id', 'jobs.id', 'jobs.round', 'jobs.bash_id', 'jobs.job_title',
                         'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
                         'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
-                        'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time',
+                        'jobs.status', 'jobs.expiration_date', 'jobs.expiration_time',
                         'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
@@ -362,6 +362,11 @@ class JobPostController extends Controller
                        ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
+                         $expirationDate = Carbon::parse($job->expiration_date)->startOfDay();
+                         $currentDate = Carbon::now()->startOfDay();
+                
+                        $daysDifference = $currentDate->diffInDays($expirationDate, false); 
+                       $isHotJob= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
                         $user = User::select('name')->where('id', $job->user_id)->first();
                         return [
                             'id' => $job->id,
@@ -377,7 +382,7 @@ class JobPostController extends Controller
                             'experience_required' => $job->experience_required,
                             'round' => json_decode($job->round, true),
                             'status' => $job->status,
-                            'is_hot_job' => $job->is_hot_job,
+                            'is_hot_job' => $isHotJob,
                             'expiration_date' => $job->expiration_date,
                             'expiration_time' => $job->expiration_time,
                             'responsibilities' => $job->responsibilities,
@@ -421,7 +426,7 @@ class JobPostController extends Controller
             'skills_required' => 'array|required',
             'status' => 'required',
             'salary_range' => 'required',
-            'is_hot_job' => 'required',
+           // 'is_hot_job' => 'required',
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
@@ -511,7 +516,7 @@ class JobPostController extends Controller
             $jobs->round = json_encode($request->round);
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
-            $jobs->is_hot_job = $request->is_hot_job;
+           // $jobs->is_hot_job = $request->is_hot_job;
             $jobs->expiration_date = $request->expiration_date;
             $jobs->expiration_time = $request->expiration_time;
             $jobs->responsibilities = $request->responsibilities;
@@ -605,8 +610,8 @@ public function get_pin_job(Request $request)
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
                     ->where('jobs.company_id', $request->company_id)
-                    ->where('jobs.is_pin', 'Yes')
-                    ->orderBy('jobs.created_at','desc')
+                      ->where('jobs.is_pin', 'Yes')
+                       ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
                         $user = User::select('name')->where('id', $job->user_id)->first();
