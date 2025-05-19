@@ -574,6 +574,11 @@ if ($deleted) {
                     'message' => 'Unauthorized',
                 ], 401);
             }
+         $roles = SuperAdminRole::select('id', 'role')
+                    ->where('parent_id', '!=', 0)
+                    ->get();
+        
+                $roleIds = $roles->pluck('id')->toArray();
         
                if ($auth->role === 'super_admin') {
                 $users =User::whereIn('role_id', $roleIds)

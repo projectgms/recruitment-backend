@@ -54,6 +54,9 @@ Route::prefix('v1')->group(function () {
 
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
+        Route::post('recruiter/add_company_event',[RecruiterCompanyController::class,'add_company_event']);
+        Route::post('recruiter/view_company_event',[RecruiterCompanyController::class,'view_company_event']);
+        Route::post('recruiter/delete_company_event',[RecruiterCompanyController::class,'delete_company_event']);
 
         Route::get('recruiter/get_interview_round', [JobPostController::class, 'get_interview_round']);
         Route::post('recruiter/check_interview_questions',[JobPostController::class,'check_interview_questions']);

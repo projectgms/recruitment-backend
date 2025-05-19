@@ -6,7 +6,7 @@ use App\Http\Controllers\JobSeeker\JobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
-
+use App\Http\Controllers\JobSeeker\HomeController;
 //JobSeeker
 use App\Http\Controllers\JobSeeker\JobSeekerAuthController;
 use App\Http\Controllers\JobSeeker\JobSeekerController;
@@ -95,9 +95,9 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
        Route::post('jobseeker/get_job_round',[JobController::class,'get_job_round']);
-     Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
-      Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
-      Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
+       Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
+       Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
+       Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
 
 
        ///Skill Test
@@ -114,5 +114,9 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/submit_mcq_interview_questions',[AppliedJobController::class,'submit_mcq_interview_questions']);
 
        Route::post('jobseeker/submit_ai_resume_analysis',[ResumeController::class,'submit_ai_resume_analysis']);
+
+       //Company Profile
+       Route::get('jobseeker/company_list',[HomeController::class,'company_list']);
+       Route::post('jobseeker/company_details',[HomeController::class,'company_details']);
 
     });

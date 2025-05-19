@@ -150,7 +150,7 @@ $user = $user->toArray();
         }
         $check_user = User::where('email', $request->email)
             ->count();
-
+        $check_company=Company::where('name',$request->company)->count();
         $check_user_mobile = User::where('mobile', $request->mobile)
             ->count();
         if ($check_user > 0) {
@@ -163,7 +163,13 @@ $user = $user->toArray();
                 'status' => false,
                 'message' => 'User mobile already Signup.',
             ]);
-        } else {
+        } else if($check_company>0)
+        {
+               return response()->json([
+                'status' => false,
+                'message' => 'Company Name already Added.',
+            ]);
+            }else {
 
             $get_role=RecruiterRole::select('id','role')->where('parent_id','0')->first();
             $oemuser = new User();
