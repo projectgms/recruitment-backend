@@ -68,10 +68,8 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/salary_insights',[JobPostController::class,'salary_insights']);
         Route::get('recruiter/recent_job_post',[JobPostController::class,'recent_job_post']);
         Route::post('recruiter/pin_job',[JobPostController::class,'pin_job']);
-         Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
-
-
-
+        Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
+        Route::post('recruiter/auto_apply_job_application',[JobPostController::class,'auto_apply_job_application']);
 
         Route::post('recruiter/add_role_permission', [RolePermissionController::class, 'add_role_permission']);
         Route::get('recruiter/view_role_permission', [RolePermissionController::class, 'view_role_permission']);

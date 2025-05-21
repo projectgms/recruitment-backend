@@ -338,5 +338,50 @@ class AppliedJobController extends Controller
             return response()->json(['status' => true, 'data'=>$jsonData,'message' => ' Submitted.']);
         }
     }
+
+    public function submit_mock_interview(Request $request)
+    {
+        $auth = JWTAuth::user();
+       
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_application_id' => 'required',
+            'company_id'=>'required',
+            'round_id' => 'required',
+            'interview_report'=>'required',
+        ], [
+            'job_application_id.required' => 'Job Application Id is required.',
+            'company_id.required'=>'Company Id is required.',
+            'round_id.required' => 'Round Id is required',
+            'interview_report.required'=>'Interview report is required',
+            
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
+        if ($check_test>0)
+        {
+            $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
+             $test->interview_report = $request->interview_report;
+          
+             $test->status = 'Completed';
+            $test->save();
+              
+            return response()->json(['status' => true, 'message' => ' Submitted.']);
+        }else{
+            return response()->json(['status' => false, 'message' => ' No round found.']);  
+        }
+    }
     
 }

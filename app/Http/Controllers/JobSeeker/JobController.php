@@ -533,7 +533,7 @@ class JobController extends Controller
       $apply->resume=$resume_url;
       $apply->resume_json=$resume_json;
       $apply->save();
-       $get_recruiter_contact=Company::select('users.mobile')->Join('jobs','jobs.company_id','=','company.id')->Join('users','users.id','=','company.user_id')->where('jobs.id',$matchingJobs->id)->first();
+       $get_recruiter_contact=Company::select('users.mobile')->Join('jobs','jobs.company_id','=','companies.id')->Join('users','users.id','=','companies.user_id')->where('jobs.id',$matchingJobs->id)->first();
       Notification::route('mail', $matchingJobs->contact_email)->notify(new UpdateJobApplication($auth->name, $matchingJobs->job_title, $auth->email,$get_recruiter_contact->mobile));
     
      $job_application_notification=new JobApplicationNotification();
@@ -915,7 +915,7 @@ class JobController extends Controller
     
            
                 curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jsonData), 
@@ -1009,7 +1009,7 @@ class JobController extends Controller
     
            
                 curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jsonData), 
@@ -1040,12 +1040,12 @@ class JobController extends Controller
                         }
                         
                           $ai = new JobseekerPrepareJob();
-                $ai->bash_id = Str::uuid();
-                $ai->title='resume';
-                $ai->jobseeker_id = $auth->id;
-                $ai->generate_resume_id = $request->id;
-                $ai->qa_output = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                $ai->save();
+                            $ai->bash_id = Str::uuid();
+                            $ai->title='resume';
+                            $ai->jobseeker_id = $auth->id;
+                            $ai->generate_resume_id = $request->id;
+                            $ai->qa_output = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                            $ai->save();
 
                          return response()->json([
                                             'status' => true,
@@ -1126,6 +1126,103 @@ class JobController extends Controller
         'summary' => trim($summary),
         'qa' => $qa
     ];
+}
+
+public function auto_apply_job(Request $request)
+{
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+          $validator = Validator::make($request->all(), [
+            'auto_apply' => 'required', 
+            'resume_id'=>'required',
+           
+        ], [
+            'auto_apply.required' => 'Auto Apply status is required.',
+            'resume_id.required'=>'Resume Id is required.'
+        ]);
+        
+           $validator = Validator::make($request->all(), [
+            'auto_apply' => 'required', 
+            'resume_id'=>'required',
+             ], [
+             'auto_apply.required' => 'JAuto Apply status is required.',
+              'resume_id.required'=>'Resume Id is required.'
+              ]);
+              if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' =>$validator->errors(),
+                
+            ], 422);
+        }
+                    
+             $auto_apply_job = JobSeekerProfessionalDetails::select('auto_apply_job', 'auto_apply_resume_id', 'id')->where('user_id', $auth->id)->first();
+           if($auto_apply_job)
+           {
+           if( $request->auto_apply==true)
+            {
+                $auto_apply=1;
+                
+            }else{
+                 $auto_apply=0;
+            }
+            $auto_apply_job->auto_apply_job=$auto_apply;
+            $auto_apply_job->auto_apply_resume_id=$request->resume_id;
+            $auto_apply_job->save();
+                return response()->json([
+                                            'status' => true,
+                                            'message' =>'Auto Apply Status Updated.',
+                                            
+                                        ]);
+           }else{
+             return response()->json([
+                                            'status' => false,
+                                            'message' =>'Please Complete profile first.',
+                                            
+                                        ]);
+           }
+}
+
+
+public function get_auto_apply_job()
+{
+      $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+       
+        $user = JobSeekerProfessionalDetails::select('auto_apply_job')->where('user_id', $auth->id)->first();
+       if($user)
+       {
+             if( $user->auto_apply_job==1)
+            {
+                $auto_apply_job=true;
+                
+            }else{
+                $auto_apply_job=false;
+            }
+            return response()->json([
+            "status" => true,
+            "message" => "Auto Apply Status.",
+            'data'=>$auto_apply_job
+            
+        ]);
+       }else{
+        
+            return response()->json([
+            "status" => false,
+            "message" => "No user data.",
+            'data'=>[]
+            
+        ]);
+       }
+       
 }
 
 }

@@ -100,6 +100,14 @@ class AllDataSeeder extends Seeder
             'active' => 1,
         ]);
 
+         $employeeRole = RecruiterRole::firstOrCreate([
+            'role' => 'Employee',
+            'bash_id'=>Str::uuid(),
+            'parent_id' => $recruiterRole->id, // Set recruiter role as parent
+            'status'=>'Active',
+            'active' => 1,
+        ]);
+
         // Insert Default Permissions for SuperAdmin
         $superAdminPermissions = [
          

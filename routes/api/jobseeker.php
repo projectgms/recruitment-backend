@@ -98,7 +98,8 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
        Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
        Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
-
+       Route::post('jobseeker/auto_apply_job',[JobController::class,'auto_apply_job']);
+       Route::get('jobseeker/get_auto_apply_job',[JobController::class,'get_auto_apply_job']);
 
        ///Skill Test
        Route::get('jobseeker/get_candidate_skills',[CandidateSkillController::class,'get_candidate_skills']);
@@ -112,6 +113,7 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/mcq_interview_instruction',[AppliedJobController::class,'mcq_interview_instruction']);
        Route::post('jobseeker/mcq_interview_questions',[AppliedJobController::class,'mcq_interview_questions']);
        Route::post('jobseeker/submit_mcq_interview_questions',[AppliedJobController::class,'submit_mcq_interview_questions']);
+      Route::post('jobseeker/submit_mock_interview',[AppliedJobController::class,'submit_mock_interview']);
 
        Route::post('jobseeker/submit_ai_resume_analysis',[ResumeController::class,'submit_ai_resume_analysis']);
 

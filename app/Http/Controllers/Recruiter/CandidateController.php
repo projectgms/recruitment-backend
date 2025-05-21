@@ -829,7 +829,7 @@ class CandidateController extends Controller
     
            
                 curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-portal-recruiter-1.onrender.com/CANDIDATE_ANALYSIS',
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/CANDIDATE_ANALYSIS',
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jsonData), 
@@ -957,7 +957,7 @@ class CandidateController extends Controller
 
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+            CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($jsonData), 

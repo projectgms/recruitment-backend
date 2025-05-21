@@ -21,6 +21,8 @@ return new class extends Migration
                 $table->longText('projects')->nullable();
                 $table->text('summary')->nullable();
                 $table->text('skills')->nullable();
+                $table->integer('auto_apply_job')->default(0);
+                $table->integer('auto_apply_resume_id')->default(0);
                 $table->text('soft_skills')->nullable();
                 $table->text('achievement')->nullable();
                 $table->text('awards')->nullable();
