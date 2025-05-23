@@ -230,4 +230,63 @@ class HomeController extends Controller
             'data' => $response_data
         ]);
     }
+
+    public function top_job_post()
+    {
+          $jobs = Jobs::select(
+            'jobs.id',
+            'jobs.bash_id',
+            'jobs.job_title',
+            'jobs.job_type',
+            'jobs.experience_required',
+                    'jobs.skills_required',
+            'jobs.salary_range',
+            'jobs.job_description',
+         
+            'jobs.location as job_locations',
+            'companies.company_logo',
+            'companies.name as company_name',
+            'companies.locations as company_locations',
+            'jobs.created_at',
+            'jobs.expiration_date'
+        )
+            ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
+            ->where('jobs.status', 'Active')
+            ->where('jobs.expiration_date','>=',date('Y-m-d'))
+            ->where('jobs.active','1')
+            ->orderBy('jobs.created_at','desc')
+            ->limit(6)
+            ->get();
+
+        // 5) Transform the company_logo into a full URL
+        $jobs->transform(function ($job) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
+            if ($job->company_logo) {
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $job->company_logo = Storage::disk('s3')->url($job->company_logo);
+                } else {
+                    // Default to local
+                    $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
+                }
+             
+            }
+              $job->job_locations = json_decode($job->job_locations, true);
+               $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
+               
+                $expirationDate = Carbon::parse($job->expiration_date)->startOfDay();
+                $currentDate = Carbon::now()->startOfDay();
+                
+                $daysDifference = $currentDate->diffInDays($expirationDate, false); 
+                   $job->is_hot_job= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
+
+            return $job;
+        });
+        return response()->json([
+            'status' => true,
+            'message' => ' jobs.',
+            'data' => $jobs
+        ]);
+    }
 }

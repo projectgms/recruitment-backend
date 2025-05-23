@@ -77,7 +77,8 @@ class InterviewController extends Controller
                 'interviews.status',
                 'interviews.interview_date',
                 'interviews.interview_link',
-                'interviews.interview_mode'
+                'interviews.interview_mode',
+                 'interviews.room_id'
             )
             ->join('job_applications', 'job_applications.id', '=', 'interviews.job_application_id')
             ->join('jobs', 'jobs.id', '=', 'job_applications.job_id')
@@ -136,6 +137,8 @@ class InterviewController extends Controller
             'interviews.interview_date',
             'interviews.interview_link',
             'interviews.interview_mode',
+             'interviews.room_id',
+                'interviews.feedback',
                 'users.open_to_work',
                 'users.name',
                 'users.first_name',
@@ -150,6 +153,7 @@ class InterviewController extends Controller
                 'users.marital_status',
                 'users.medical_history',
                 'users.disability',
+                'interviews.interviewer_id',
                 'users.language_known',
                 'job_applications.status as application_status',
                  'job_applications.id as job_application_id',
@@ -200,7 +204,13 @@ class InterviewController extends Controller
                 foreach (['certifications', 'publications', 'trainings', 'educations', 'experience', 'skills', 'projects', 'internship'] as $field) {
                     $candidate->{$field} = json_decode($candidate->{$field}, true);
                 }
-
+                $get_interviewer=User::select('name','email')->where('id',$candidate->interviewer_id)->first();
+                if($get_interviewer)
+                {
+                    $candidate->interviewer_name=$get_interviewer->name;
+                }else{
+                    $candidate->interviewer_name='';
+                }
                 $candidate->open_to_work = $candidate->open_to_work == 1;
 
                 // Resume
@@ -231,6 +241,7 @@ class InterviewController extends Controller
         'data' => $candidates
     ]);
     }
+    
     
       public function update_candidate_interview_status(Request $request)
     {
@@ -312,6 +323,7 @@ class InterviewController extends Controller
                         $insert_new_round->interview_date =  $request->interview_date;
                         $insert_new_round->interview_mode = $request->interview_mode;
                         $insert_new_round->interview_link = $request->interview_link;
+                       $insert_new_round->room_id = $request->meeting_room_id;
                         $insert_new_round->status = 'Shortlisted';
                         $insert_new_round->save();
                         

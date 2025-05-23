@@ -941,9 +941,9 @@ class JobController extends Controller
                  curl_close($ch);
                $decoded = json_decode($response, true);
                                         
-                if (isset($decoded['qa_output'])) {
-                    $decoded = $this->transformQaOutput($decoded['qa_output']);
-                    unset($decoded['qa_output']); // Optional: remove the raw string
+                if (isset($decoded['questions'])) {
+                    $decoded = $this->transformQaOutput($decoded['questions']);
+                    unset($decoded['questions']); // Optional: remove the raw string
                 }
                $ai = new JobseekerPrepareJob();
                 $ai->bash_id = Str::uuid();
@@ -1034,9 +1034,9 @@ class JobController extends Controller
                         // Step 2: Decode and transform response
                         $decoded = json_decode($response, true);
                                                 
-                        if (isset($decoded['qa_output'])) {
-                            $decoded = $this->transformQaOutput($decoded['qa_output']);
-                            unset($decoded['qa_output']); // Optional: remove the raw string
+                        if (isset($decoded['questions'])) {
+                            $decoded = $this->transformQaOutput($decoded['questions']);
+                            unset($decoded['questions']); // Optional: remove the raw string
                         }
                         
                           $ai = new JobseekerPrepareJob();

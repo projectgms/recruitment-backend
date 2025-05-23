@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/pin_job',[JobPostController::class,'pin_job']);
         Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
         Route::post('recruiter/auto_apply_job_application',[JobPostController::class,'auto_apply_job_application']);
+        Route::post('recruiter/ai_generate_question',[JobPostController::class,'ai_generate_question']);
 
         Route::post('recruiter/add_role_permission', [RolePermissionController::class, 'add_role_permission']);
         Route::get('recruiter/view_role_permission', [RolePermissionController::class, 'view_role_permission']);

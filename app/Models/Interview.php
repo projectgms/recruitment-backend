@@ -25,6 +25,7 @@ class Interview extends Model
         'interview_date',
         'interview_mode',
         'interview_link',
+        'room_id',
         'interview_report',
         'feedback'
     ];

@@ -983,9 +983,9 @@ class CandidateController extends Controller
             curl_close($ch);
             $decoded = json_decode($response, true);
                                     
-            if (isset($decoded['qa_output'])) {
-                $decoded = $this->transformQaOutput($decoded['qa_output']);
-                unset($decoded['qa_output']); // Optional: remove the raw string
+            if (isset($decoded['questions'])) {
+                $decoded = $this->transformQaOutput($decoded['questions']);
+                unset($decoded['questions']); // Optional: remove the raw string
             }
      $ai = new RecruiterPrepareJob();
                 $ai->bash_id = Str::uuid();

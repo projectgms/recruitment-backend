@@ -45,10 +45,10 @@ class AdminUserController extends Controller
     
        
        
-         $roles =  SuperAdminRole::select('id', 'role', 'status')
-                ->where('parent_id', '!=', 0)
-                ->where('active', 1)
-                ->get();
+        $roles =  SuperAdminRole::select('id', 'bash_id','role', 'active','status','created_at','updated_at')
+        ->where('parent_id', '!=', 0)
+        ->where('active', 1)
+        ->get();
       
         return response()->json([
             'status' => true,

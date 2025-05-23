@@ -88,7 +88,7 @@ class AppliedJobController extends Controller
                 $roundIds = json_decode($job->round, true);
 
                 // Fetch interview round details
-                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date','interviews.interview_link as link', 'interviews.interview_mode as mode')
+                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date','interviews.interview_link as link', 'interviews.interview_mode as mode','interviews.room_id')
 
                     ->leftJoin('interviews', function ($join) use ($job) {
                         // Apply the condition on the join to ensure left join behavior
@@ -166,8 +166,8 @@ class AppliedJobController extends Controller
                 'company_name' => $check_job->name,
                 'company_id' => $check_job->company_id,
                
-                'total_question' => '10',
-                'total_time' => '10 Mins'
+                'total_question' => '20',
+                'total_time' => '20 Mins'
             );
             return response()->json(['status' => true, 'message' => 'Mcq Interview Instrction', 'data' => $data]);
         }else{
@@ -180,7 +180,7 @@ class AppliedJobController extends Controller
         }
     }
     
-   public function mcq_interview_questions(Request $request)
+    public function mcq_interview_questions(Request $request)
     {
         $auth = JWTAuth::user();
        
@@ -208,7 +208,7 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
-          $get_experience=JobSeekerContactDetails::select('jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
+          $get_experience=JobSeekerContactDetails::select('jobs.ai_generate_question','jobs.company_id','jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
         ->Join('job_applications','job_applications.job_seeker_id','=','job_seeker_contact_details.user_id')
         ->Join('jobs','jobs.id','=','job_applications.job_id')
         ->where('job_applications.job_seeker_id','=',$auth->id)
@@ -235,27 +235,31 @@ class AppliedJobController extends Controller
                     $level = 'High';
                 }
             
-                // Fetch questions matching any of the required skills at the appropriate level
-                $get_que = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
-                    ->where('skill_level', $level)
-                    ->where(function ($query) use ($skills) {
-                        foreach ($skills as $skill) {
-                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
-
-                    $words = preg_split('/[\s,]+/', strtolower($skill));
-                    foreach ($words as $word) {
-                        if (!empty($word) && !in_array($word, $stopWords)) {
-                            $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                $query = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
+                ->where('skill_level', $level);
+            
+                // Filter questions based on skills
+                $query->where(function ($query) use ($skills) {
+                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
+            
+                    foreach ($skills as $skill) {
+                        $words = preg_split('/[\s,]+/', strtolower($skill));
+                        foreach ($words as $word) {
+                            if (!empty($word) && !in_array($word, $stopWords)) {
+                                $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                            }
                         }
                     }
+                });
+            
+                // Now check ai_generate_question flag
+                if ($get_experience->ai_generate_question == 1) {
+                    // Filter by company and job
+                    $query->where('company_id', $get_experience->company_id);
+                      //  ->where('job_id', $request->job_id);
                 }
-                    })
-                    
-                    
-             
-                    ->inRandomOrder()
-                    ->limit(10)
-                    ->get();
+            
+                $get_que = $query->inRandomOrder()->limit(20)->get();
             return response()->json(['status' => true, 'message' => 'Candidate Skill Test Questions' ,'data'=>$get_que]);
         }else{
             return response()->json(['status'=>false,'message'=>'Skill not match.']);

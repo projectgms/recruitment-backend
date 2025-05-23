@@ -28,6 +28,7 @@ return new class extends Migration
                 $table->dateTime('interview_date')->nullable();
                 $table->string('interview_mode')->nullable();
                 $table->text('interview_link')->nullable(); 
+                $table->string('room_id')->unique()->nullable();
                 $table->longText('interview_report')->nullable();
                 $table->string('status');
                 $table->text('feedback')->nullable();

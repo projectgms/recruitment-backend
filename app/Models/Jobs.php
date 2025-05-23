@@ -21,6 +21,7 @@ class Jobs extends Model
         'location',
         'industry',
         'is_hot_job',
+        'ai_generate_job',
         'contact_email',
         'salary_range',
         'skills_required',

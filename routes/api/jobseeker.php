@@ -15,6 +15,8 @@ use App\Http\Controllers\JobSeeker\ResumeController;
 use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Models\CandidateSkillTest;
 
+//Home Routes
+    Route::get('jobseeker/top_job_post',[HomeController::class,'top_job_post']);
 // Job Seeker API routes
     Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
     Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);

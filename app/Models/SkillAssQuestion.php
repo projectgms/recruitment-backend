@@ -20,6 +20,9 @@ class SkillAssQuestion extends Model
                 'option2',
                 'option3',
                 'option4',
-                'correct_answer'
+                'correct_answer',
+                'marks',
+                'company_id',
+                 'job_id'
             ];
 }

@@ -137,12 +137,12 @@ class UpdateJobApplication extends Notification
                     ->line("- **Date & Time**: $interviewDate")
                     ->line("- **Platform**: $platform");
 
-                if ($hasLink) {
-                    $mail->line("- **Link**: [Click to Join Interview]($link)")
-                         ->action('Join Interview', $link);
-                } else {
+                // if ($hasLink) {
+                //     $mail->line("- **Link**: [Click to Join Interview]($link)")
+                //          ->action('Join Interview', $link);
+                // } else {
                     $mail->line("- **Link**: Please check your dashboard for the interview link.");
-                }
+                //}
                 break;
 
             case 'Hold':
