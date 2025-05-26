@@ -826,7 +826,13 @@ public function get_interview_round()
 
             ], 422);
         }
+          ///after subscription remove this exit
+  return response()->json([
+                            'status' => true,
+                            'message' => 'Job Applied.',
 
+                        ]);
+        exit;
         $job_post = Jobs::select('id', 'bash_id', 'job_title', 'salary_range', 'skills_required', 'experience_required')
             ->where('company_id', $auth->company_id)
             ->where('active', '1')

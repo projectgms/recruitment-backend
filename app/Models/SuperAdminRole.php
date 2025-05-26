@@ -12,7 +12,8 @@ class SuperAdminRole extends Model
     protected $fillable = [
         'id', 
         'bash_id', 
-        'role', 
+        'role',
+        'role_desc',
         'parent_id',
         'status',
         'added_by',

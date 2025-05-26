@@ -117,7 +117,8 @@ Route::prefix('v1')->group(function () {
         Route::get('admin/profile', [AdminAuthController::class, 'profile']);
         Route::get('admin/get_roles',[AdminUserController::class,'get_roles']);
         Route::post('admin/add_roles',[AdminUserController::class,'add_roles']);
-        Route::post('admin/update_action',[AdminUserController::class,'update_action']);
+        Route::post('admin/update_role',[AdminUserController::class,'update_role']);
+        Route::post('admin/bulk_action',[AdminUserController::class,'bulk_action']);
         Route::post('admin/delete_role',[AdminUserController::class,'delete_role']);
 
         Route::post('admin/add_role_permission',[AdminUserController::class,'add_role_permission']);

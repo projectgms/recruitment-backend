@@ -158,7 +158,7 @@ class HomeController extends Controller
             'jobs.job_title',
             'jobs.job_type',
             'jobs.experience_required',
-                    'jobs.skills_required',
+            'jobs.skills_required',
             'jobs.salary_range',
             'jobs.job_description',
          
@@ -239,10 +239,9 @@ class HomeController extends Controller
             'jobs.job_title',
             'jobs.job_type',
             'jobs.experience_required',
-                    'jobs.skills_required',
+            'jobs.skills_required',
             'jobs.salary_range',
             'jobs.job_description',
-         
             'jobs.location as job_locations',
             'companies.company_logo',
             'companies.name as company_name',
@@ -287,6 +286,42 @@ class HomeController extends Controller
             'status' => true,
             'message' => ' jobs.',
             'data' => $jobs
+        ]);
+    }
+
+     public function best_companies()
+    {
+         $company = Company::select(
+            'companies.company_logo',
+            'companies.name as company_name',
+            'companies.locations as company_locations',
+            'companies.industry as industry',
+            'companies.company_description',
+        )->where('active','1')->get();
+
+        // 5) Transform the company_logo into a full URL
+        $company->transform(function ($company) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
+            if ($company->company_logo) {
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $company->company_logo = Storage::disk('s3')->url($company->company_logo);
+                } else {
+                    // Default to local
+                    $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
+                }
+             
+            }
+              $company->company_locations = json_decode($company->company_locations, true);
+               $company->industry = json_decode($company->industry, true);
+              
+            return $company;
+        });
+        return response()->json([
+            'status' => true,
+            'message' => ' Company.',
+            'data' => $company
         ]);
     }
 }
