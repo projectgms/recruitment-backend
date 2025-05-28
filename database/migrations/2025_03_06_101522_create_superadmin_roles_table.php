@@ -16,11 +16,12 @@ return new class extends Migration
             $table->id();
             $table->string('bash_id')->unique();
             $table->string('role');
+            $table->text('role_desc')->nullable();
             $table->integer('parent_id');
             $table->integer('active');
             $table->string('status')->nullable();
             $table->integer('added_by')->nullable();
-             $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
          }

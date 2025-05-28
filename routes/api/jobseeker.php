@@ -6,7 +6,7 @@ use App\Http\Controllers\JobSeeker\JobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
-
+use App\Http\Controllers\JobSeeker\HomeController;
 //JobSeeker
 use App\Http\Controllers\JobSeeker\JobSeekerAuthController;
 use App\Http\Controllers\JobSeeker\JobSeekerController;
@@ -15,7 +15,10 @@ use App\Http\Controllers\JobSeeker\ResumeController;
 use App\Http\Controllers\Recruiter\RecruiterController;
 use App\Models\CandidateSkillTest;
 
-// Job Seeker API routes
+    //Home Routes
+    Route::get('jobseeker/top_job_post',[HomeController::class,'top_job_post']);
+    Route::get('jobseeker/best_companies',[HomeController::class,'best_companies']);
+    // Job Seeker API routes
     Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
     Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);
     Route::post('jobseeker/forgot_password', [JobSeekerController::class, 'forgot_password']);
@@ -95,10 +98,11 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/get_job_details',[JobController::class,'get_job_details']);
        Route::post('jobseeker/apply_job',[JobController::class,'apply_job']);
        Route::post('jobseeker/get_job_round',[JobController::class,'get_job_round']);
-     Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
-      Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
-      Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
-
+       Route::post('jobseeker/check_job_post_notification',[JobController::class,'check_job_post_notification']);
+       Route::post('jobseeker/update_job_post_notification',[JobController::class,'update_job_post_notification']);
+       Route::post('jobseeker/prepare_for_job',[JobController::class,'prepare_for_job']);
+       Route::post('jobseeker/auto_apply_job',[JobController::class,'auto_apply_job']);
+       Route::get('jobseeker/get_auto_apply_job',[JobController::class,'get_auto_apply_job']);
 
        ///Skill Test
        Route::get('jobseeker/get_candidate_skills',[CandidateSkillController::class,'get_candidate_skills']);
@@ -112,7 +116,12 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/mcq_interview_instruction',[AppliedJobController::class,'mcq_interview_instruction']);
        Route::post('jobseeker/mcq_interview_questions',[AppliedJobController::class,'mcq_interview_questions']);
        Route::post('jobseeker/submit_mcq_interview_questions',[AppliedJobController::class,'submit_mcq_interview_questions']);
+      Route::post('jobseeker/submit_mock_interview',[AppliedJobController::class,'submit_mock_interview']);
 
        Route::post('jobseeker/submit_ai_resume_analysis',[ResumeController::class,'submit_ai_resume_analysis']);
+
+       //Company Profile
+       Route::get('jobseeker/company_list',[HomeController::class,'company_list']);
+       Route::post('jobseeker/company_details',[HomeController::class,'company_details']);
 
     });

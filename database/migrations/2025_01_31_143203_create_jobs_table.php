@@ -23,7 +23,8 @@ return new class extends Migration
                 $table->string('job_type');
                 $table->longText('location')->nullable();
                 $table->longText('industry');
-                $table->string('is_hot_job');
+                $table->string('is_hot_job')->default('No');
+                $table->integer('ai_generate_question')->default(0);
                 $table->string('contact_email');
                 $table->string('salary_range');
                 $table->longText('skills_required');

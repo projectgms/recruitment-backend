@@ -18,6 +18,8 @@ class JobSeekerProfessionalDetails extends Model
         'projects',
         'summery',
         'skills',
+        'auto_apply_job',
+        'auto_apply_resume_id',
         'soft_skills',
         'achievement',
         'awards',

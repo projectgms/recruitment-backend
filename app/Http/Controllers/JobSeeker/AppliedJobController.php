@@ -88,7 +88,7 @@ class AppliedJobController extends Controller
                 $roundIds = json_decode($job->round, true);
 
                 // Fetch interview round details
-                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date','interviews.interview_link as link', 'interviews.interview_mode as mode')
+                $job->interview_rounds = InterviewRound::select('interview_rounds.id as round_id', 'interview_rounds.round_name', 'interviews.status', 'interviews.interview_date as date','interviews.interview_link as link', 'interviews.interview_mode as mode','interviews.room_id')
 
                     ->leftJoin('interviews', function ($join) use ($job) {
                         // Apply the condition on the join to ensure left join behavior
@@ -166,8 +166,8 @@ class AppliedJobController extends Controller
                 'company_name' => $check_job->name,
                 'company_id' => $check_job->company_id,
                
-                'total_question' => '10',
-                'total_time' => '10 Mins'
+                'total_question' => '20',
+                'total_time' => '20 Mins'
             );
             return response()->json(['status' => true, 'message' => 'Mcq Interview Instrction', 'data' => $data]);
         }else{
@@ -180,7 +180,7 @@ class AppliedJobController extends Controller
         }
     }
     
-   public function mcq_interview_questions(Request $request)
+    public function mcq_interview_questions(Request $request)
     {
         $auth = JWTAuth::user();
        
@@ -208,7 +208,7 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
-          $get_experience=JobSeekerContactDetails::select('jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
+          $get_experience=JobSeekerContactDetails::select('jobs.ai_generate_question','jobs.company_id','jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
         ->Join('job_applications','job_applications.job_seeker_id','=','job_seeker_contact_details.user_id')
         ->Join('jobs','jobs.id','=','job_applications.job_id')
         ->where('job_applications.job_seeker_id','=',$auth->id)
@@ -235,27 +235,31 @@ class AppliedJobController extends Controller
                     $level = 'High';
                 }
             
-                // Fetch questions matching any of the required skills at the appropriate level
-                $get_que = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'correct_answer', 'marks')
-                    ->where('skill_level', $level)
-                    ->where(function ($query) use ($skills) {
-                        foreach ($skills as $skill) {
-                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for']; // Add more if needed
-
-                    $words = preg_split('/[\s,]+/', strtolower($skill));
-                    foreach ($words as $word) {
-                        if (!empty($word) && !in_array($word, $stopWords)) {
-                            $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                $query = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
+                ->where('skill_level', $level);
+            
+                // Filter questions based on skills
+                $query->where(function ($query) use ($skills) {
+                    $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
+            
+                    foreach ($skills as $skill) {
+                        $words = preg_split('/[\s,]+/', strtolower($skill));
+                        foreach ($words as $word) {
+                            if (!empty($word) && !in_array($word, $stopWords)) {
+                                $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
+                            }
                         }
                     }
+                });
+            
+                // Now check ai_generate_question flag
+                if ($get_experience->ai_generate_question == 1) {
+                    // Filter by company and job
+                    $query->where('company_id', $get_experience->company_id);
+                      //  ->where('job_id', $request->job_id);
                 }
-                    })
-                    
-                    
-             
-                    ->inRandomOrder()
-                    ->limit(10)
-                    ->get();
+            
+                $get_que = $query->inRandomOrder()->limit(20)->get();
             return response()->json(['status' => true, 'message' => 'Candidate Skill Test Questions' ,'data'=>$get_que]);
         }else{
             return response()->json(['status'=>false,'message'=>'Skill not match.']);
@@ -263,7 +267,7 @@ class AppliedJobController extends Controller
         }
     }
     
-      public function submit_mcq_interview_questions(Request $request)
+       public function submit_mcq_interview_questions(Request $request)
     {
          $auth = JWTAuth::user();
        
@@ -278,16 +282,15 @@ class AppliedJobController extends Controller
             'job_application_id' => 'required',
             'company_id'=>'required',
             'round_id' => 'required',
-            'score'=>'required',
-            'total'=>'required'
+            'answers'=>'array|required',
+            
             
         ], [
             'job_application_id.required' => 'Job Application Id is required.',
             'company_id.required'=>'Company Id is required.',
             'round_id.required' => 'Round Id is required',
-            'score.required'=>'Score is required',
-            'total.required'=>'Total marks required'
-           
+            'answers.required'=>'answers is required',
+            
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -297,16 +300,91 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
+        $answers = [];
+    $score=0;
+    $total=0;
+        // Handle file uploads
+        $i = 1;
+        foreach ($request->answers as $key => $answer) {
+            $get_que=SkillAssQuestion::select('correct_answer','marks')->where('id',$answer['id'])->where('question',$answer['question'])->first();
+            // Store JSON data with updated file path
+            $total += $get_que->marks; 
+             if ($answer['answer'] == $get_que->correct_answer) 
+             {
+                    $valid_answer = true;
+                    $score += $get_que->marks;  // Add marks if the answer is correct
+            }
+            $answers[] = [
+               
+                "id" => $answer['id'] ? $answer['id'] : null,
+                "question" => $answer['question'] ? $answer['question'] : null,
+                "answer" => $answer['answer'] ? $answer['answer'] : null,
+                "correct_answer" => $get_que->correct_answer ? $get_que->correct_answer : null,
+                
+            ];
+            $i++;
+        }
+        
          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
         if ($check_test>0)
         {
             $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
-             $test->score = $request->score;
-            $test->total = $request->total;
+             $test->score = $score;
+            $test->total = $total;
            
              $test->status = 'Completed';
             $test->save();
-            return response()->json(['status' => false, 'message' => ' Submitted.']);
+               $jsonData = [
+                'valid_answer' =>$answers,
+                'score' => $score,
+                 'total'=>$total
+            ];
+            return response()->json(['status' => true, 'data'=>$jsonData,'message' => ' Submitted.']);
+        }
+    }
+
+    public function submit_mock_interview(Request $request)
+    {
+        $auth = JWTAuth::user();
+       
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_application_id' => 'required',
+            'company_id'=>'required',
+            'round_id' => 'required',
+            'interview_report'=>'required',
+        ], [
+            'job_application_id.required' => 'Job Application Id is required.',
+            'company_id.required'=>'Company Id is required.',
+            'round_id.required' => 'Round Id is required',
+            'interview_report.required'=>'Interview report is required',
+            
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
+        if ($check_test>0)
+        {
+            $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
+             $test->interview_report = $request->interview_report;
+          
+             $test->status = 'Completed';
+            $test->save();
+              
+            return response()->json(['status' => true, 'message' => ' Submitted.']);
+        }else{
+            return response()->json(['status' => false, 'message' => ' No round found.']);  
         }
     }
     

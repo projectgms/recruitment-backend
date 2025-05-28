@@ -12,14 +12,16 @@ use Illuminate\Http\Request;
 use App\Models\Company;
 use App\Models\InterviewRound;
 use App\Models\JobPostNotification;
-
+use App\Models\GenerateResume;
+use App\Models\JobSeekerProfessionalDetails;
 use App\Models\Jobs;
 use App\Models\User;
+use Illuminate\Support\Facades\Notification;
 
 use Illuminate\Support\Str;
 use App\Models\SkillAssQuestion;
 use Illuminate\Support\Facades\Cache;
-
+use App\Models\JobApplicationNotification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -141,7 +143,7 @@ class JobPostController extends Controller
             'skills_required' => 'array|required',
             'status' => 'required',
             'salary_range' => 'required',
-            'is_hot_job' => 'required',
+          //  'is_hot_job' => 'required',
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
@@ -232,12 +234,12 @@ class JobPostController extends Controller
             $jobs->contact_email = $request->contact_email;
             $jobs->salary_range = $request->salary_range;
             $jobs->skills_required = json_encode($request->skills_required);
-
+            $jobs->ai_generate_question=$request->ai_generate_question;
             $jobs->industry = json_encode($request->industry);
 
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
-            $jobs->is_hot_job = $request->is_hot_job;
+         //   $jobs->is_hot_job = $request->is_hot_job;
             $jobs->expiration_date = $request->expiration_date;
             $jobs->expiration_time = $request->expiration_time;
             $jobs->responsibilities = $request->responsibilities;
@@ -251,7 +253,13 @@ class JobPostController extends Controller
             $job_post_notification->message='New Job post added for the role '.$request->job_title;
             $job_post_notification->save();
 
-            return response()->json(['status' => true, 'message' => 'New Job Post Added.'], 200);
+            $data=[
+                'job_id'=>$jobs->id,
+                'job_bash_id'=>$jobs->bash_id,
+                'company_id'=> $jobs->company_id,
+                'ai_generate_question'=> $jobs->ai_generate_question
+                ];
+            return response()->json(['status' => true, 'data'=>$data,'message' => 'New Job Post Added.'], 200);
         } else {
             return response()->json(['status' => false, 'message' => 'Job post already added']);
         }
@@ -351,10 +359,10 @@ class JobPostController extends Controller
            
           
         $job_post=Jobs::select(
-                        'jobs.user_id', 'jobs.id', 'jobs.round', 'jobs.bash_id', 'jobs.job_title',
+                        'jobs.user_id', 'jobs.id', 'jobs.ai_generate_question','jobs.round', 'jobs.bash_id', 'jobs.job_title',
                         'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
                         'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
-                        'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time',
+                        'jobs.status', 'jobs.expiration_date', 'jobs.expiration_time',
                         'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
@@ -362,6 +370,11 @@ class JobPostController extends Controller
                        ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
+                         $expirationDate = Carbon::parse($job->expiration_date)->startOfDay();
+                         $currentDate = Carbon::now()->startOfDay();
+                
+                        $daysDifference = $currentDate->diffInDays($expirationDate, false); 
+                       $isHotJob= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
                         $user = User::select('name')->where('id', $job->user_id)->first();
                         return [
                             'id' => $job->id,
@@ -377,7 +390,8 @@ class JobPostController extends Controller
                             'experience_required' => $job->experience_required,
                             'round' => json_decode($job->round, true),
                             'status' => $job->status,
-                            'is_hot_job' => $job->is_hot_job,
+                            'is_hot_job' => $isHotJob,
+                            'ai_generate_question' => $job->ai_generate_question,
                             'expiration_date' => $job->expiration_date,
                             'expiration_time' => $job->expiration_time,
                             'responsibilities' => $job->responsibilities,
@@ -421,7 +435,7 @@ class JobPostController extends Controller
             'skills_required' => 'array|required',
             'status' => 'required',
             'salary_range' => 'required',
-            'is_hot_job' => 'required',
+           // 'is_hot_job' => 'required',
             'expiration_date' => 'required',
             'expiration_time' => 'required',
             'job_type' => 'required',
@@ -506,18 +520,25 @@ class JobPostController extends Controller
             $jobs->contact_email = $request->contact_email;
             $jobs->salary_range = $request->salary_range;
             $jobs->skills_required = json_encode($request->skills_required);
-
+ $jobs->ai_generate_question=$request->ai_generate_question;
             $jobs->industry = json_encode($request->industry);
             $jobs->round = json_encode($request->round);
             $jobs->experience_required = $request->experience_required;
             $jobs->status = $request->status;
-            $jobs->is_hot_job = $request->is_hot_job;
+           // $jobs->is_hot_job = $request->is_hot_job;
             $jobs->expiration_date = $request->expiration_date;
             $jobs->expiration_time = $request->expiration_time;
             $jobs->responsibilities = $request->responsibilities;
             $jobs->save();
            
-            return response()->json(['status' => true, 'message' => ' Job Post Updated.'], 200);
+            $data=[
+                'job_id'=>$jobs->id,
+                'job_bash_id'=>$jobs->bash_id,
+                'company_id'=> $jobs->company_id,
+                'ai_generate_question'=> $jobs->ai_generate_question
+                ];
+            return response()->json(['status' => true, 'data'=>$data,'message' => 'New Job Post Added.'], 200);
+          
         } else {
             return response()->json(['status' => false, 'message' => 'Job post already added']);
         }
@@ -605,8 +626,8 @@ public function get_pin_job(Request $request)
                     )
                     ->join('companies', 'companies.id', '=', 'jobs.company_id')
                     ->where('jobs.company_id', $request->company_id)
-                    ->where('jobs.is_pin', 'Yes')
-                    ->orderBy('jobs.created_at','desc')
+                      ->where('jobs.is_pin', 'Yes')
+                       ->orderBy('jobs.created_at','desc')
                     ->get()
                     ->map(function ($job) {
                         $user = User::select('name')->where('id', $job->user_id)->first();
@@ -702,33 +723,59 @@ public function get_interview_round()
         if (!$auth) {
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
-      
-      
-      
-            $job_post= Jobs::select('jobs.id', 'jobs.job_title')
-                ->where('jobs.company_id', $auth->company_id)
-                ->where('active', '1')
-                ->get()
-                ->map(function ($job) {
-                    $application_count = JobApplication::where('job_id', $job->id)->count();
-    
-                    if ($application_count > 0) {
-                        return [
-                            'job_title' => $job->job_title,
-                            'application_count' => $application_count,
-                        ];
-                    }
-                    return null;
-                })
-                ->filter()
-                ->values()
-                ->toArray();
-      
-        return response()->json([
-            'status' => true,
-            'message' => 'Get Job Posts Count.',
-            'data' => $job_post
+        $validator = Validator::make($request->all(), [
+            'period' => 'required',
+            
         ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'message' => $validator->errors()], 422);
+        }
+        $period = $request->period; // Accepts 'weekly', 'quarterly', 'halfyear', or 'yearly'
+
+    // Define the period filters based on the requested period
+    $periodFilters = [
+        'weekly' => Carbon::now()->subWeek(),
+         'monthly' => Carbon::now()->subMonth(),
+        'quarterly' => Carbon::now()->subMonths(3),
+        'halfyear' => Carbon::now()->subMonths(6),
+        'yearly' => Carbon::now()->subYear(),
+    ];
+
+   
+
+    $periodStart = $periodFilters[$period];
+
+    // Get the job posts along with the application count based on the period
+    $job_post = Jobs::select('jobs.id', 'jobs.job_title')
+        ->where('jobs.company_id', $auth->company_id)
+        ->where('active', '1')
+        ->get()
+        ->map(function ($job) use ($periodStart) {
+            // Count applications based on the selected period
+            $application_count = JobApplication::where('job_id', $job->id)
+                ->where('created_at', '>=', $periodStart) // Filter applications by the period
+                ->count();
+
+            // Only return the job if it has applications within the period
+            if ($application_count > 0) {
+                return [
+                    'job_title' => $job->job_title,
+                    'application_count' => $application_count,
+                ];
+            }
+
+            return null; // Return null if no applications match the period
+        })
+        ->filter() // Remove null results
+        ->values() // Re-index the collection
+        ->toArray();
+
+    return response()->json([
+        'status' => true,
+        'message' => 'Get Job Posts Count for Period.',
+        'data' => $job_post
+    ]);
     }
       public function salary_insights(Request $request)
     {
@@ -751,5 +798,256 @@ public function get_interview_round()
             'message' => 'Get Job Salary Insight.',
             'data' => $job_post
         ]);
+    }
+    
+    
+    public function auto_apply_job_application(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required',
+            'job_bash_id' => 'required',
+            'company_id' => 'required'
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'job_bash_id.required' => 'Job Bash Id is required',
+            'company_id.required' => 'Company Id is required',
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+          ///after subscription remove this exit
+  return response()->json([
+                            'status' => true,
+                            'message' => 'Job Applied.',
+
+                        ]);
+        exit;
+        $job_post = Jobs::select('id', 'bash_id', 'job_title', 'salary_range', 'skills_required', 'experience_required')
+            ->where('company_id', $auth->company_id)
+            ->where('active', '1')
+            ->where('id', $request->job_id)
+            ->where('bash_id', $request->job_bash_id)
+            ->where('jobs.status', 'Active')
+            ->where('jobs.expiration_date', '>=', date('Y-m-d'))
+            ->first();
+        if ($job_post) {
+
+            $jobSkills = json_decode($job_post->skills_required, true);
+            if (!is_array($jobSkills)) {
+                $jobSkills = array_map('trim', explode(',', $job_post->skills_required));
+            }
+
+            $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
+            preg_match('/\d+/', $job_post->experience_required, $match);
+            $requiredExperience = isset($match[0]) ? (int)$match[0] : 0;
+
+            $get_auto_apply_candidate = JobSeekerProfessionalDetails::select(
+                'users.id',
+                'users.name',
+                 'users.email',
+                   'users.mobile',
+                'jobseeker_professional_details.skills',
+                'job_seeker_contact_details.total_year_exp',
+                'job_seeker_contact_details.total_month_exp',
+                'jobseeker_professional_details.auto_apply_resume_id'
+            )
+                ->leftJoin('job_seeker_contact_details', 'job_seeker_contact_details.user_id', '=', 'jobseeker_professional_details.user_id')
+                ->leftJoin('users', 'users.id', 'jobseeker_professional_details.user_id')
+                ->where('jobseeker_professional_details.auto_apply_job', '1')
+                ->where(function ($query) use ($jobSkills, $stopWords) {
+                    foreach ($jobSkills as $skill) {
+                        $words = preg_split('/[\s,]+/', strtolower($skill));
+                        foreach ($words as $word) {
+                            if (!empty($word) && !in_array($word, $stopWords)) {
+                                $query->orWhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ['%' . $word . '%']);
+                            }
+                        }
+                    }
+                })
+                ->whereRaw('(job_seeker_contact_details.total_year_exp + job_seeker_contact_details.total_month_exp / 12) >= ?', [$requiredExperience])
+                ->where('users.active', '1')
+                ->get();
+
+            if ($get_auto_apply_candidate) {
+                foreach ($get_auto_apply_candidate as $get_auto_apply_candidate) {
+                    $check_job = JobApplication::where('job_id', '=', $request->job_id)->where('job_seeker_id', '=', $get_auto_apply_candidate->id)->first();
+
+                    if ($check_job) {
+
+                        continue;
+                    } else {
+                        $resume = GenerateResume::select('resume', 'resume_json')->where('user_id', $get_auto_apply_candidate->id)->where('id', $get_auto_apply_candidate->auto_apply_resume_id)->first();
+                        if ($resume) {
+                            // Modify the company logo to include the full URL if it exists
+                            if ($resume->resume) {
+                                $resume_url = $resume->resume;
+                            } else {
+                                // If no logo exists, set it to null or a default image URL
+                                $resume_url = null; // Replace with a default image URL if needed
+                            }
+                            $resume_json = $resume->resume_json;
+                        } else {
+                            $resume_url = null;
+                            $resume_json = '';
+                        }
+                        $apply = new JobApplication();
+                        $apply->bash_id = Str::uuid();
+                        $apply->job_id = $request->job_id;
+                        $apply->job_seeker_id = $get_auto_apply_candidate->id;
+                        $apply->status = 'Applied';
+                        $apply->resume = $resume_url;
+                        $apply->resume_json = $resume_json;
+                        $apply->save();
+                        $get_recruiter_contact = Company::select('users.mobile','jobs.contact_email','companies.name as company_name','companies.website')->Join('jobs', 'jobs.company_id', '=', 'companies.id')->Join('users', 'users.id', '=', 'companies.user_id')->where('jobs.id', $request->job_id)->first();
+                        //send to recruiter
+                        Notification::route('mail', $get_recruiter_contact->contact_email)->notify(new \App\Notifications\JobSeeker\UpdateJobApplication($get_auto_apply_candidate->name, $job_post->job_title, $get_auto_apply_candidate->email,$get_recruiter_contact->mobile));
+                        //send to jobseeker
+                        Notification::route('mail', $get_auto_apply_candidate->email)->notify(new \App\Notifications\JobSeeker\JobSeekerJobUpdate($get_auto_apply_candidate->name, $get_auto_apply_candidate->mobile,$job_post->job_title, $get_recruiter_contact->contact_email,$get_recruiter_contact->mobile,$get_recruiter_contact->company_name,$get_recruiter_contact->website));
+
+                        $job_application_notification = new JobApplicationNotification();
+                        $job_application_notification->bash_id = Str::uuid();
+                        $job_application_notification->job_id = $request->job_id;
+                        $job_application_notification->job_application_id = $apply->id;
+                        $job_application_notification->company_id = $request->company_id;
+                        $job_application_notification->jobseeker_id = $get_auto_apply_candidate->id;
+                        $job_application_notification->type = 'Job Application';
+                        $job_application_notification->message = 'New Job application added for the role ' . $job_post->job_title;
+                        $job_application_notification->is_read = '0';
+                        $job_application_notification->save();
+
+                        return response()->json([
+                            'status' => true,
+                            'message' => 'Job Applied.',
+
+                        ]);
+                    }
+                }
+            } else {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Your Skill and Experience not match this job..',
+
+                ]);
+            }
+        }
+    }
+    
+     public function ai_generate_question(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_id' => 'required',
+            'job_bash_id' => 'required',
+            'company_id' => 'required',
+            'ai_generate_question'=>'required'
+
+        ], [
+            'job_id.required' => 'Job Id is required.',
+            'job_bash_id.required' => 'Job Bash Id is required',
+            'company_id.required' => 'Company Id is required',
+            'ai_generate_question'=>'Ai Generate Question '
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+      
+         $job_post = Jobs::select('id', 'ai_generate_question','bash_id', 'job_title', 'salary_range', 'skills_required', 'experience_required')
+            ->where('company_id', $auth->company_id)
+            ->where('active', '1')
+            ->where('ai_generate_question', '1')
+            ->where('id', $request->job_id)
+            ->where('bash_id', $request->job_bash_id)
+            ->where('jobs.status', 'Active')
+            ->first();
+            if($job_post)
+            {
+                $ch = curl_init();
+                 $jd=array("job_title"=>$job_post->job_title,
+
+                   
+                    "skills_required"=>json_decode($job_post->skills_required),
+                  
+                    "experience"=>$job_post->experience_required,
+                  
+                    );
+     
+                              curl_setopt_array($ch, [
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/generate_mcqs',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($jd),
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/json',
+                    ],
+                    CURLOPT_FOLLOWLOCATION => true, // Follow redirects
+                    CURLOPT_FAILONERROR => false,   // Show error response bodies
+                ]);
+                        
+                $response = curl_exec($ch);
+        
+                $decoded = json_decode($response, true);
+                  if (isset($decoded['mcqs'])) {
+                        foreach ($decoded['mcqs'] as $mcqs)
+                        {
+                            
+                          $existing = SkillAssQuestion::where('question', trim($mcqs['question']))->exists();
+
+                            if (!$existing) {
+                                SkillAssQuestion::create([
+                                    'skill'          => $mcqs['skill'],
+                                    'skill_level'    => $mcqs['skill_level'],
+                                    'question'       => $mcqs['question'],
+                                    'option1'        => $mcqs['option1'],
+                                    'option2'        => $mcqs['option2'],
+                                    'option3'        => $mcqs['option3'],
+                                    'option4'        => $mcqs['option4'],
+                                    'correct_answer' => $mcqs['correct_answer'],
+                                    'company_id'=>$auth->company_id,
+                                    'job_id'=>$request->job_id
+                                ]);
+                            }
+                        }    
+                  }
+        
+                if (curl_errno($ch)) {
+                        return response()->json([
+                        'status' => false,
+                        'message' =>curl_error($ch),
+                        
+                    ]);
+          
+                 }
+               
+
+            }
+        else{
+              return response()->json([
+                            'status' => false,
+                            'message' => 'No Job found for AI Generate Question Yes.',
+
+                        ]); 
+        }
+
     }
 }

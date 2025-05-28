@@ -19,11 +19,14 @@ class Interview extends Model
         'recruiter_id',
         'company_id',
         'round_id',
+        'interviewer_id',
         'score',
         'total',
         'interview_date',
         'interview_mode',
         'interview_link',
+        'room_id',
+        'interview_report',
         'feedback'
     ];
 }

@@ -8,23 +8,27 @@ use Illuminate\Notifications\Messages\MailMessage;
 use App\Models\Jobs;
 use Twilio\Rest\Client;
 
-class UpdateJobApplication extends Notification
+class JobSeekerJobUpdate extends Notification
 {
     use Queueable;
   
   protected $candidate_name;
+  protected $candidate_mobile;
   protected $job_title;
-  protected $candidate_email;
-  protected $application_id;
-  protected $dashboard_link;
+  protected $company_email;
   protected $recruiter_mobile;
+  protected $company_name;
+  protected $website;
 
-  public function __construct($candidate_name, $job_title, $candidate_email,$recruiter_mobile)
+  public function __construct($candidate_name,$candidate_mobile, $job_title, $company_email,$recruiter_mobile,$company_name,$website)
   {
       $this->candidate_name = $candidate_name;
+      $this->candidate_mobile = $candidate_mobile;
       $this->job_title = $job_title;
-      $this->candidate_email = $candidate_email;
+      $this->company_email = $company_email;
       $this->recruiter_mobile=$recruiter_mobile;
+      $this->company_name=$company_name;
+      $this->website=$website;
   }
 
   /**
@@ -40,10 +44,14 @@ class UpdateJobApplication extends Notification
    */
   public function toMail(object $notifiable): MailMessage
   {
-   $whatsappMessage ="Hello,";
-         $whatsappMessage .="\nYou’ve received a new job application.";
-         $whatsappMessage .="\n**Candidate:** {$this->candidate_name}";
+   $whatsappMessage ="Hello  {$this->candidate_name},";
+         $whatsappMessage .="\nYour Application is received for.";
+       
          $whatsappMessage .="\n**Position:** {$this->job_title}";
+         $whatsappMessage .="\n**Company Name:** {$this->company_name}";
+          $whatsappMessage .="\n**Company Website:** {$this->website}";
+           $whatsappMessage .="\n**Contact Number:** {$this->recruiter_mobile}";
+            $whatsappMessage .="\n**Contact Email:** {$this->company_email}";
          $whatsappMessage .="\nLogin to your dashboard to view the full application details.";
          $whatsappMessage .="\nThank you for using our platform!";
       try {
@@ -54,7 +62,7 @@ class UpdateJobApplication extends Notification
             $twilio = new Client($sid, $token);
 
             $twilio->messages->create(
-                "whatsapp:+91{$this->recruiter_mobile}",
+                "whatsapp:+91{$this->candidate_mobile}",
                 [
                     "from" => $from,
                     "body" => $whatsappMessage
@@ -64,12 +72,14 @@ class UpdateJobApplication extends Notification
           //  \Log::error('WhatsApp message failed: ' . $e->getMessage());
         }
       return (new MailMessage)
-          ->subject("New Application for {$this->job_title}")
-          ->greeting("Hello ,")
-          ->line("You’ve received a new job application.")
-          ->line("**Candidate:** {$this->candidate_name}")
-          ->line("**Email:** {$this->candidate_email}")
+          ->subject("Your Application is received for {$this->job_title}")
+          ->greeting("Hello {$this->candidate_name},")
+          
           ->line("**Position:** {$this->job_title}")
+          ->line("**Company Name:** {$this->company_name}")
+          ->line("**Company Website:** {$this->website}")
+          ->line("**Contact Number:** {$this->recruiter_mobile}")
+          ->line("**Contact Email:** {$this->company_email}")
           
           ->line("Login to your dashboard to view the full application details.")
           ->line('Thank you for using our platform!');

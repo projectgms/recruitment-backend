@@ -5,18 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SuperAdminRole extends Model
+class CompanyEvent extends Model
 {
     use HasFactory;
-    protected $table = 'superadmin_roles';
+      protected $table = 'company_events';
     protected $fillable = [
         'id', 
         'bash_id', 
-        'role',
-        'role_desc',
-        'parent_id',
+        'company_id', 
+        'title',
+        'description',
+        'event_images',
         'status',
-        'added_by',
         'active'
     ];
+    
 }

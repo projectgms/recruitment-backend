@@ -45,10 +45,10 @@ class AdminUserController extends Controller
     
        
        
-         $roles =  SuperAdminRole::select('id', 'role', 'status')
-                ->where('parent_id', '!=', 0)
-                ->where('active', 1)
-                ->get();
+        $roles =  SuperAdminRole::select('id', 'bash_id','role','role_desc','active','status','created_at','updated_at')
+        ->where('parent_id', '!=', 0)
+        ->where('active', 1)
+        ->get();
       
         return response()->json([
             'status' => true,
@@ -73,10 +73,10 @@ class AdminUserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'role' => 'required',
-           
+            'role_desc'=>'required'
         ], [
             'role.required' => 'Role is required.',
-          
+            'role_desc.required'=>'Role Description is required.'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -109,8 +109,58 @@ class AdminUserController extends Controller
         ]);
         }
     }
+    public function update_role(Request $request)
+    {
+        $auth=JWTAuth::user();
+        if(!$auth)
+        {
+            return response()->json(['status'=>false,'message'=>'Unauthorized'],401);
+        }
+        
+        $validator=Validator::make($request->all(),[
+            'id'=>'required',
+            'role'=>'required',
+            'role_desc'=>'required'
+        ],[
+            'id.required'=>'Id is required.',
+            'role.required'=>'Role is required.',
+            'role_desc.required'=>'Role Description is required.'
+        ]);
 
-    public function update_action(Request $request)
+           if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' =>$validator->errors(),
+                
+            ], 422);
+        }
+        $check_role=SuperAdminRole::select('id','role','status')->where('role',$request->role)->where('id','!=',$request->id)->where('active','1')->first();
+        if($check_role)
+        {
+            return response()->json([
+                "status" => false,
+                "message" => "Role Already Exist",
+               
+            ]); 
+        }else{
+            $get_role=SuperAdminRole::select('id')->where('role',$auth->role)->first();
+           $roles=SuperAdminRole::find($request->id);
+           
+           $roles->role=$request->role;
+           $roles->role_desc=$request->role_desc;
+           $roles->parent_id=$get_role->id;
+           $roles->status="Active";
+           $roles->added_by=$auth->id;
+           $roles->save();
+           return response()->json([
+            "status" => true,
+            "message" => "Role Updated.",
+           
+        ]);
+        }
+        
+    }
+    public function bulk_action(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -125,11 +175,11 @@ class AdminUserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'action' => 'required',
-           'id'=>'required'
+           'action' => 'required',
+           'ids'=>'array|required'
         ], [
             'action.required' => 'Action is required.',
-            'id.required'=>'Id is required.'
+            'ids.required'=>'Id is required.'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -138,13 +188,21 @@ class AdminUserController extends Controller
                 
             ], 422);
         }
-
-        $roles=SuperAdminRole::find($request->id);
-        
-            $roles->status=$request->action;
-         
-        
-           $roles->save();
+        if($request->action=='enable')
+        {
+         SuperAdminRole::whereIn('id', $request->ids)
+        ->update(['status' => 'Active']);
+        }
+        if($request->action=='disable')
+        {
+         SuperAdminRole::whereIn('id', $request->ids)
+        ->update(['status' => 'Inactive']);
+        }
+         if($request->action=='delete')
+        {
+         SuperAdminRole::whereIn('id', $request->ids)
+        ->update(['active' => '0']);
+        }
            return response()->json([
             "status" => true,
             "message" => "Action Updated",
@@ -574,6 +632,11 @@ if ($deleted) {
                     'message' => 'Unauthorized',
                 ], 401);
             }
+         $roles = SuperAdminRole::select('id', 'role')
+                    ->where('parent_id', '!=', 0)
+                    ->get();
+        
+                $roleIds = $roles->pluck('id')->toArray();
         
                if ($auth->role === 'super_admin') {
                 $users =User::whereIn('role_id', $roleIds)

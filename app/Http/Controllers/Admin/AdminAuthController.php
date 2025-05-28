@@ -184,7 +184,7 @@ class AdminAuthController extends Controller
            ], 422);
        }
          // Find the user by email
-         $user = User::select('id','password')->where('email', $request->email)->first();
+         $user = User::select('id','password','role','role_id')->where('email', $request->email)->first();
 
          // Check if the user exists
          if ($user) {

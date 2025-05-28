@@ -14,7 +14,7 @@ use App\Models\JobSeekerProfessionalDetails;
 use Illuminate\Support\Facades\Storage;
 use App\Notifications\Recruiter\UpdateJobApplication;
 use App\Models\CandidateSkillTest;
-
+use App\Models\RecruiterPrepareJob;
 use App\Models\JobApplicationNotification;
 
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Interview;
 use App\Models\InterviewRound;
-
+use Twilio\Rest\Client;
 class CandidateController extends Controller
 {
     //
@@ -480,7 +480,7 @@ class CandidateController extends Controller
                 $words = preg_split('/[\s,]+/', strtolower($skill));
                 foreach ($words as $word) {
                     if (!empty($word) && !in_array($word, $stopWords)) {
-                        $sub->WhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ["%{$word}%"]);
+                        $sub->orWhereRaw("LOWER(jobseeker_professional_details.skills) LIKE ?", ["%{$word}%"]);
                     }
                 }
             }
@@ -489,10 +489,14 @@ class CandidateController extends Controller
         //     $jobTitle = strtolower($request->search);
         //     $query->orWhereRaw("LOWER(jobs.job_title) LIKE ?", ['%' . $jobTitle . '%']);
         // }
-        if ($request->filled('location')) {
-            // partial match, case-insensitive
-            $location = strtolower($request->location);
-            $query->WhereRaw("LOWER(users.location) LIKE ?", ['%' . $location . '%']);
+      if ($request->filled('location') && is_array($request->location)) {
+            $locations = array_map('strtolower', $request->location);
+        
+            $query->where(function ($subQuery) use ($locations) {
+                foreach ($locations as $loc) {
+                    $subQuery->orWhereRaw("LOWER(users.location) LIKE ?", ["%{$loc}%"]);
+                }
+            });
         }
         if ($request->filled('min_experience') && $request->filled('max_experience')) {
         $minExp = (int) $request->min_experience;
@@ -622,69 +626,7 @@ class CandidateController extends Controller
         ]);
     }
 
-    public function update_filter_job_applicant_test(Request $request)
-    {
-        $auth = JWTAuth::user();
-
-        if (!$auth) {
-            return response()->json(
-                [
-                    'status' => false,
-                    'message' => 'Unauthorized',
-                ],
-                401
-            );
-        }
-        $validator = Validator::make($request->all(), [
-            'job_application_id' => 'array|required',
-            'job_application_status' => 'required',
-            'job_id' => 'required'
-
-        ], [
-            'job_id.required' => 'Job Id is required.',
-            'job_application_id.required' => 'Job Application Id is required.',
-            'job_application_status' => 'Job Application Status required.'
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors(),
-
-            ], 422);
-        }
-
-        $job_application = JobApplication::select('users.name','companies.name as company_name','companies.website','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
-        ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
-        ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
-       ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
-       
-        ->where('jobs.id', $request->job_id)
-        ->whereIn('job_applications.id', $request->job_application_id)
-        ->get();
-    if ($job_application) {
-        foreach ($job_application as $job_application) {
-            
-            $update_status = JobApplication::where('id', $job_application->job_application_id)
-                ->where('job_id', $request->job_id)
-                ->first();
-            
-            if ($update_status) {
-                $update_status->status = $request->job_application_status;
-                $update_status->save();
-                if($request->job_application_status!=$job_application->status)
-                {
-                Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status));
-       
-                }
-            }
-        }
-        return response()->json([
-            'status' => true,
-            'message' => 'Job Application Status .',
-            
-        ]);
-    }
-    }
+   
     
        public function update_filter_job_applicant(Request $request)
     {
@@ -717,7 +659,7 @@ class CandidateController extends Controller
             ], 422);
         }
 
-        $job_application = JobApplication::select('users.name','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
+        $job_application = JobApplication::select('users.name','users.mobile','companies.name as company_name','jobs.round','companies.website','job_applications.job_seeker_id','jobs.company_id','users.id','jobs.job_title','users.email','job_applications.id as job_application_id', 'job_applications.status')
         ->leftJoin('jobs', 'jobs.id', '=', 'job_applications.job_id')
         ->leftJoin('users', 'users.id', '=', 'job_applications.job_seeker_id')
        ->leftJoin('companies', 'companies.id', '=', 'jobs.company_id')
@@ -790,8 +732,9 @@ class CandidateController extends Controller
                             }
                         }
                     }
-                     Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status,$get_round_name->round_name,$request->interview_date?$request->interview_date:'',$request->interview_mode?$request->interview_mode:'',$request->interview_link?$request->interview_link:''));
-       
+                    
+                    Notification::route('mail', $job_application->email)->notify(new UpdateJobApplication($job_application->name,$job_application->job_title,$job_application->company_name,$job_application->website,$request->job_application_status,$get_round_name->round_name,$request->interview_date?$request->interview_date:'',$request->interview_mode?$request->interview_mode:'',$request->interview_link?$request->interview_link:'',$job_application->mobile));
+
                 }
             }
         }
@@ -886,7 +829,7 @@ class CandidateController extends Controller
     
            
                 curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-portal-recruiter-1.onrender.com/CANDIDATE_ANALYSIS',
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/CANDIDATE_ANALYSIS',
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jsonData), 
@@ -988,6 +931,19 @@ class CandidateController extends Controller
         "expirationTime"=>$job_application->expiration_time
         );
 
+ $check_prepare_job = RecruiterPrepareJob::select('qa_output')->where('job_application_id', $request->job_application_id)
+                ->where('company_id', $auth->company_id)
+                ->where('job_id',$request->job_id)
+                ->first();
+        
+            if ($check_prepare_job) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Already Prepare',
+                    'data' =>json_decode($check_prepare_job->qa_output), 
+                ]);
+            }
+
             $ch = curl_init();
                 
             $resumeArray = is_string($job_application->resume_json)
@@ -1001,7 +957,7 @@ class CandidateController extends Controller
 
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => 'https://job-fso4.onrender.com/QUESTIONEER',
+            CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($jsonData), 
@@ -1027,10 +983,17 @@ class CandidateController extends Controller
             curl_close($ch);
             $decoded = json_decode($response, true);
                                     
-            if (isset($decoded['qa_output'])) {
-                $decoded = $this->transformQaOutput($decoded['qa_output']);
-                unset($decoded['qa_output']); // Optional: remove the raw string
+            if (isset($decoded['questions'])) {
+                $decoded = $this->transformQaOutput($decoded['questions']);
+                unset($decoded['questions']); // Optional: remove the raw string
             }
+     $ai = new RecruiterPrepareJob();
+                $ai->bash_id = Str::uuid();
+                $ai->company_id = $auth->company_id;
+                $ai->job_id=$request->job_id;
+                $ai->job_application_id = $request->job_application_id;
+                $ai->qa_output = json_encode($decoded, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                $ai->save();
 
             return response()->json([
                 'status' => true,

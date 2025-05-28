@@ -5,18 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SuperAdminRole extends Model
+class RecruiterPrepareJob extends Model
 {
     use HasFactory;
-    protected $table = 'superadmin_roles';
+     protected $table = 'recruiter_prepare_jobs';
     protected $fillable = [
         'id', 
         'bash_id', 
-        'role',
-        'role_desc',
-        'parent_id',
-        'status',
-        'added_by',
-        'active'
+        'company_id',
+        'job_application_id',
+        'job_id',
+        'qa_output',
+      
+        'active',
+     
     ];
 }

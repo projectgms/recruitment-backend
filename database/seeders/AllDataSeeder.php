@@ -22,6 +22,11 @@ class AllDataSeeder extends Seeder
             'round_name' => 'MCQ Test',
            
         ],
+         [
+            'bash_id'=>Str::uuid(),
+            'round_name' => 'Mock Interview',
+           
+        ],
         [
             'bash_id'=>Str::uuid(),
             'round_name' => 'Technical Test',
@@ -89,6 +94,14 @@ class AllDataSeeder extends Seeder
 
         $managerRole = RecruiterRole::firstOrCreate([
             'role' => 'Manager',
+            'bash_id'=>Str::uuid(),
+            'parent_id' => $recruiterRole->id, // Set recruiter role as parent
+            'status'=>'Active',
+            'active' => 1,
+        ]);
+
+         $employeeRole = RecruiterRole::firstOrCreate([
+            'role' => 'Employee',
             'bash_id'=>Str::uuid(),
             'parent_id' => $recruiterRole->id, // Set recruiter role as parent
             'status'=>'Active',

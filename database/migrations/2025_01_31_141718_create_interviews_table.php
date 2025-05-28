@@ -21,12 +21,15 @@ return new class extends Migration
                 $table->integer('jobseeker_id');
                 $table->integer('recruiter_id')->default(0);
                 $table->integer('company_id');
-                  $table->integer('round_id');
+                $table->integer('round_id');
+                $table->integer('interviewer_id')->default(0);
                 $table->string('score');
                 $table->string('total');
                 $table->dateTime('interview_date')->nullable();
                 $table->string('interview_mode')->nullable();
-                $table->text('interview_link')->nullable();
+                $table->text('interview_link')->nullable(); 
+                $table->string('room_id')->unique()->nullable();
+                $table->longText('interview_report')->nullable();
                 $table->string('status');
                 $table->text('feedback')->nullable();
                 $table->timestamp('created_at')->useCurrent();

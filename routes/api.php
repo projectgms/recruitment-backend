@@ -54,6 +54,9 @@ Route::prefix('v1')->group(function () {
 
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
+        Route::post('recruiter/add_company_event',[RecruiterCompanyController::class,'add_company_event']);
+        Route::post('recruiter/view_company_event',[RecruiterCompanyController::class,'view_company_event']);
+        Route::post('recruiter/delete_company_event',[RecruiterCompanyController::class,'delete_company_event']);
 
         Route::get('recruiter/get_interview_round', [JobPostController::class, 'get_interview_round']);
         Route::post('recruiter/check_interview_questions',[JobPostController::class,'check_interview_questions']);
@@ -65,10 +68,9 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/salary_insights',[JobPostController::class,'salary_insights']);
         Route::get('recruiter/recent_job_post',[JobPostController::class,'recent_job_post']);
         Route::post('recruiter/pin_job',[JobPostController::class,'pin_job']);
-         Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
-
-
-
+        Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
+        Route::post('recruiter/auto_apply_job_application',[JobPostController::class,'auto_apply_job_application']);
+        Route::post('recruiter/ai_generate_question',[JobPostController::class,'ai_generate_question']);
 
         Route::post('recruiter/add_role_permission', [RolePermissionController::class, 'add_role_permission']);
         Route::get('recruiter/view_role_permission', [RolePermissionController::class, 'view_role_permission']);
@@ -115,7 +117,8 @@ Route::prefix('v1')->group(function () {
         Route::get('admin/profile', [AdminAuthController::class, 'profile']);
         Route::get('admin/get_roles',[AdminUserController::class,'get_roles']);
         Route::post('admin/add_roles',[AdminUserController::class,'add_roles']);
-        Route::post('admin/update_action',[AdminUserController::class,'update_action']);
+        Route::post('admin/update_role',[AdminUserController::class,'update_role']);
+        Route::post('admin/bulk_action',[AdminUserController::class,'bulk_action']);
         Route::post('admin/delete_role',[AdminUserController::class,'delete_role']);
 
         Route::post('admin/add_role_permission',[AdminUserController::class,'add_role_permission']);
