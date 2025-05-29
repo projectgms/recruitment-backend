@@ -77,8 +77,8 @@ class InterviewController extends Controller
                 'interviews.status',
                 'interviews.interview_date',
                 'interviews.interview_link',
-                'interviews.interview_mode',
-                 'interviews.room_id'
+                'interviews.room_id',
+                'interviews.interview_mode'
             )
             ->join('job_applications', 'job_applications.id', '=', 'interviews.job_application_id')
             ->join('jobs', 'jobs.id', '=', 'job_applications.job_id')
@@ -157,7 +157,7 @@ class InterviewController extends Controller
                 'users.language_known',
                 'job_applications.status as application_status',
                  'job_applications.id as job_application_id',
-            'job_applications.bash_id as job_application_bash_id',
+                'job_applications.bash_id as job_application_bash_id',
                 'job_applications.resume',
                 'job_applications.job_seeker_id',
                 'job_seeker_contact_details.country',
@@ -242,7 +242,6 @@ class InterviewController extends Controller
     ]);
     }
     
-    
       public function update_candidate_interview_status(Request $request)
     {
         $auth = JWTAuth::user();
@@ -309,6 +308,7 @@ class InterviewController extends Controller
                      { 
                          //update current round interview status to Selected
                         $update_status->status = $request->status;
+                         $update_status->feedback=$request->feedback;
                        $update_status->save();
                        //add entry for new Interview round 
                       
@@ -323,7 +323,8 @@ class InterviewController extends Controller
                         $insert_new_round->interview_date =  $request->interview_date;
                         $insert_new_round->interview_mode = $request->interview_mode;
                         $insert_new_round->interview_link = $request->interview_link;
-                       $insert_new_round->room_id = $request->meeting_room_id;
+                          $insert_new_round->room_id = $request->meeting_room_id;
+                        $insert_new_round->interviewer_id= $request->interviewer_id ? $request->interviewer_id : 0;
                         $insert_new_round->status = 'Shortlisted';
                         $insert_new_round->save();
                         
@@ -345,6 +346,7 @@ class InterviewController extends Controller
                     }else{
                            //update current round interview status to Selected
                         $update_status->status = $request->status;
+                         $update_status->feedback=$request->feedback;
                        $update_status->save();
                           if($update_job_application)
                            {
@@ -369,6 +371,7 @@ class InterviewController extends Controller
                         //       $update_status->interview_link = $request->interview_link;
                         //   }
                            $update_status->status = $request->status;
+                            $update_status->feedback=$request->feedback;
                            $update_status->save();
                            
                            //Update Job Application status

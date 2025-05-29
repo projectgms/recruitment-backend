@@ -166,8 +166,8 @@ class AppliedJobController extends Controller
                 'company_name' => $check_job->name,
                 'company_id' => $check_job->company_id,
                
-                'total_question' => '20',
-                'total_time' => '20 Mins'
+                'total_question' => '30',
+                'total_time' => '30 Mins'
             );
             return response()->json(['status' => true, 'message' => 'Mcq Interview Instrction', 'data' => $data]);
         }else{
@@ -180,7 +180,7 @@ class AppliedJobController extends Controller
         }
     }
     
-    public function mcq_interview_questions(Request $request)
+   public function mcq_interview_questions(Request $request)
     {
         $auth = JWTAuth::user();
        
@@ -208,7 +208,7 @@ class AppliedJobController extends Controller
             ], 422);
         }
         
-          $get_experience=JobSeekerContactDetails::select('jobs.ai_generate_question','jobs.company_id','jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
+          $get_experience=JobSeekerContactDetails::select('jobs.ai_generate_question','job_applications.job_id','jobs.id','jobs.company_id','jobs.skills_required','job_seeker_contact_details.user_id','job_seeker_contact_details.total_year_exp')
         ->Join('job_applications','job_applications.job_seeker_id','=','job_seeker_contact_details.user_id')
         ->Join('jobs','jobs.id','=','job_applications.job_id')
         ->where('job_applications.job_seeker_id','=',$auth->id)
@@ -234,10 +234,10 @@ class AppliedJobController extends Controller
                 } else {
                     $level = 'High';
                 }
-            
-                $query = SkillAssQuestion::select('id', 'skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
-                ->where('skill_level', $level);
-            
+         
+                $query = SkillAssQuestion::select('id','job_id','skill', 'skill_level', 'question', 'option1', 'option2', 'option3', 'option4', 'marks')
+               ->where('skill_level', $level);
+                 
                 // Filter questions based on skills
                 $query->where(function ($query) use ($skills) {
                     $stopWords = ['and', 'or', 'the', 'with', 'a', 'an', 'to', 'of', 'for'];
@@ -255,11 +255,14 @@ class AppliedJobController extends Controller
                 // Now check ai_generate_question flag
                 if ($get_experience->ai_generate_question == 1) {
                     // Filter by company and job
-                    $query->where('company_id', $get_experience->company_id);
-                      //  ->where('job_id', $request->job_id);
+                   // $get_experience->id;
+                //  echo  $get_experience->id;
+                   $query->where('company_id', $get_experience->company_id);
+                  $query->where('job_id', $get_experience->job_id);
                 }
-            
-                $get_que = $query->inRandomOrder()->limit(20)->get();
+          
+                $get_que = $query->inRandomOrder()->limit(30)->get();
+               // dd($get_que);
             return response()->json(['status' => true, 'message' => 'Candidate Skill Test Questions' ,'data'=>$get_que]);
         }else{
             return response()->json(['status'=>false,'message'=>'Skill not match.']);
@@ -269,6 +272,7 @@ class AppliedJobController extends Controller
     
        public function submit_mcq_interview_questions(Request $request)
     {
+       
          $auth = JWTAuth::user();
        
         if (!$auth) {
@@ -324,7 +328,7 @@ class AppliedJobController extends Controller
             ];
             $i++;
         }
-        
+    
          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
         if ($check_test>0)
         {
@@ -342,8 +346,8 @@ class AppliedJobController extends Controller
             return response()->json(['status' => true, 'data'=>$jsonData,'message' => ' Submitted.']);
         }
     }
-
-    public function submit_mock_interview(Request $request)
+    
+      public function submit_mock_interview(Request $request)
     {
         $auth = JWTAuth::user();
        

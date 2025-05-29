@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\JobSeeker;
 
 use App\Http\Controllers\Controller;
+use App\Models\CandidateReview;
 use App\Models\JobApplication;
 use App\Models\JobSeekerProfessionalDetails;
 use App\Models\SavedJob;
@@ -103,7 +104,7 @@ class HomeController extends Controller
             }
         
            $company->locations = json_decode($company->locations, true);
-                $company->industry = json_decode($company->industry, true);
+            $company->industry = json_decode($company->industry, true);
                 
         }
         
@@ -322,6 +323,40 @@ class HomeController extends Controller
             'status' => true,
             'message' => ' Company.',
             'data' => $company
+        ]);
+    }
+
+ public function platform_review()
+    {
+        $review=CandidateReview::select('candidate_reviews.rating','candidate_reviews.review','users.name','users.profile_picture')
+        ->Join('users','users.id','=','candidate_reviews.jobseeker_id')
+        ->where('candidate_reviews.status','Approved')
+        ->orderBy('candidate_reviews.id','desc')
+        ->limit(10)
+        ->get();
+        if($review)
+        {
+          $review->transform(function ($review) {
+             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+ 
+            if ($review->profile_picture) {
+                if ($disk=== 's3') {
+                    // For S3, use Storage facade with the 's3' disk
+                    $review->profile_picture = Storage::disk('s3')->url($review->profile_picture);
+                } else {
+                    // Default to local
+                    $review->profile_picture = env('APP_URL') . Storage::url('app/public/' . $review->profile_picture);
+                }
+             
+            }
+             
+            return $review;
+             });
+        }
+        return response()->json([
+            'status' => true,
+            'message' => ' Reviews.',
+            'data' => $review
         ]);
     }
 }

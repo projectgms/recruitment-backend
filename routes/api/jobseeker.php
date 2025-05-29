@@ -18,6 +18,7 @@ use App\Models\CandidateSkillTest;
     //Home Routes
     Route::get('jobseeker/top_job_post',[HomeController::class,'top_job_post']);
     Route::get('jobseeker/best_companies',[HomeController::class,'best_companies']);
+    Route::get('jobseeker/platform_review',[HomeController::class,'platform_review']);
     // Job Seeker API routes
     Route::post('jobseeker/login', [JobSeekerAuthController::class, 'login']);
     Route::post('jobseeker/register',[JobSeekerAuthController::class,'register']);
@@ -30,6 +31,7 @@ use App\Models\CandidateSkillTest;
        Route::get('jobseeker/profile', [JobSeekerAuthController::class, 'profile']);
        Route::post('jobseeker/personal_info',[JobSeekerProfileController::class,'personal_info']);
        Route::get('jobseeker/get_personal_info',[JobSeekerProfileController::class,'get_personal_info']);
+       Route::post('jobseeker/submit_candidate_review',[JobSeekerProfileController::class,'submit_candidate_review']);
        Route::post('jobseeker/change_password',[JobSeekerAuthController::class,'change_password']);
        Route::post('jobseeker/update_first_login',[JobSeekerAuthController::class,'update_first_login']);
 

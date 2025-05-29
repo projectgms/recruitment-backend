@@ -8,6 +8,7 @@ use App\Models\JobSeekerContactDetails;
 use App\Models\JobSeekerEducationDetails;
 use App\Models\JobSeekerProfessionalDetails;
 use App\Models\AIAnalysisResume;
+use App\Models\CandidateReview;
 use Illuminate\Http\Request;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Str;
@@ -2845,7 +2846,7 @@ $contact->work_status = $request->work_status;
             ], 401);
         }
         $user = User::select('open_to_work')->where('id', $auth->id)->first();
-        if( $user->open_to_work==1)
+        if($user->open_to_work==1)
             {
                 $open_to_work=true;
                 
@@ -2857,6 +2858,46 @@ $contact->work_status = $request->work_status;
             "message" => "Open to Work Status.",
             'data'=>$open_to_work
             
+        ]);
+    }
+
+    public function submit_candidate_review(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'review' => 'required',
+            'rating'=>'required'
+        ], [
+            'review.required' => 'Review is required.', 
+            'rating.required'=>'Rating is required'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $review=new CandidateReview();
+        $review->bash_id=Str::uuid();
+        $review->jobseeker_id=$auth->id;
+        $review->review=$request->review;
+        $review->rating=$request->rating;
+        $review->status='Pending';
+        $review->save();
+         return response()->json([
+            "status" => true,
+            "message" => "Review Added.",
+           
         ]);
     }
 }

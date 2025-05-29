@@ -73,10 +73,10 @@ class AdminUserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'role' => 'required',
-            'role_desc'=>'required'
+          //  'role_desc'=>'required'
         ], [
             'role.required' => 'Role is required.',
-            'role_desc.required'=>'Role Description is required.'
+            //'role_desc.required'=>'Role Description is required.'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -120,11 +120,11 @@ class AdminUserController extends Controller
         $validator=Validator::make($request->all(),[
             'id'=>'required',
             'role'=>'required',
-            'role_desc'=>'required'
+           // 'role_desc'=>'required'
         ],[
             'id.required'=>'Id is required.',
             'role.required'=>'Role is required.',
-            'role_desc.required'=>'Role Description is required.'
+            //'role_desc.required'=>'Role Description is required.'
         ]);
 
            if ($validator->fails()) {
@@ -426,12 +426,10 @@ class AdminUserController extends Controller
             ];
         }
 
-      
-
-    return response()->json([
-        'status' => true,
-        'data' => $response
-    ]);
+        return response()->json([
+            'status' => true,
+            'data' => $response
+        ]);
     }
 
     public function update_role_permission(Request $request)
@@ -632,7 +630,7 @@ if ($deleted) {
                     'message' => 'Unauthorized',
                 ], 401);
             }
-         $roles = SuperAdminRole::select('id', 'role')
+                $roles = SuperAdminRole::select('id', 'role')
                     ->where('parent_id', '!=', 0)
                     ->get();
         
