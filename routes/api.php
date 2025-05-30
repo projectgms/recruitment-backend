@@ -71,6 +71,7 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/get_pin_job',[JobPostController::class,'get_pin_job']);
         Route::post('recruiter/auto_apply_job_application',[JobPostController::class,'auto_apply_job_application']);
         Route::post('recruiter/ai_generate_question',[JobPostController::class,'ai_generate_question']);
+        Route::post('recruiter/ai_salary_range',[JobPostController::class,'ai_salary_range']);
 
         Route::post('recruiter/add_role_permission', [RolePermissionController::class, 'add_role_permission']);
         Route::get('recruiter/view_role_permission', [RolePermissionController::class, 'view_role_permission']);
@@ -96,6 +97,7 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/update_filter_job_applicant_test',[CandidateController::class,'update_filter_job_applicant_test']);
         Route::post('open_to_work',[CandidateController::class,'open_to_work']);
         Route::post('recruiter/smart_search_candidate',[CandidateController::class,'smart_search_candidate']);
+        Route::post('recruiter/smart_search_invitation',[CandidateController::class,'smart_search_invitation']);
 
          //Job Application Notification
         Route::post('recruiter/view_job_application_notification',[CandidateController::class,'view_job_application_notification']);

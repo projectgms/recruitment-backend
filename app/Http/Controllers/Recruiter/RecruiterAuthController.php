@@ -75,8 +75,8 @@ class RecruiterAuthController extends Controller
 
                 // Attempt to log the user in and generate the token
                 if ($token = JWTAuth::claims($customClaims)->attempt($credentials)) {
-$user = $user->toArray();
-            $user['first_login'] = $isFirstLogin;
+                $user = $user->toArray();
+                $user['first_login'] = $isFirstLogin;
 
                     return response()->json([
                         "status" => true,

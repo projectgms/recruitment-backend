@@ -347,6 +347,7 @@ class AppliedJobController extends Controller
         }
     }
     
+   
       public function submit_mock_interview(Request $request)
     {
         $auth = JWTAuth::user();
@@ -362,13 +363,12 @@ class AppliedJobController extends Controller
             'job_application_id' => 'required',
             'company_id'=>'required',
             'round_id' => 'required',
-            'interview_report'=>'required',
+          
         ], [
             'job_application_id.required' => 'Job Application Id is required.',
             'company_id.required'=>'Company Id is required.',
             'round_id.required' => 'Round Id is required',
-            'interview_report.required'=>'Interview report is required',
-            
+           
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -381,7 +381,42 @@ class AppliedJobController extends Controller
         if ($check_test>0)
         {
             $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
-             $test->interview_report = $request->interview_report;
+           
+                  $job_details=array("user_id"=>$auth->bash_id,
+             
+               
+               );
+          
+         
+           $postData = http_build_query($job_details);
+                
+                $ch = curl_init();
+                
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
+                    ],
+                ]);
+                
+                $response = curl_exec($ch);
+              curl_close($ch);
+            
+            if (curl_errno($ch)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => curl_error($ch),
+                ]);
+            }
+            
+            $responseData = json_decode($response, true);
+           
+           
+             $test->interview_report = $responseData['report'];
           
              $test->status = 'Completed';
             $test->save();
@@ -389,6 +424,122 @@ class AppliedJobController extends Controller
             return response()->json(['status' => true, 'message' => ' Submitted.']);
         }else{
             return response()->json(['status' => false, 'message' => ' No round found.']);  
+        }
+    }
+     public function talk_interview(Request $request)
+    {
+       $auth=JWTAuth::user();
+       if(!$auth)
+       {
+           return response()->json([
+               'status'=>false,
+               'message'=>'Unauthorized'],401);
+       }
+       
+        $validator = Validator::make($request->all(), [
+            'job_application_id' => 'required',
+            'job_application_bash_id'=>'required',
+           // 'interview_id'=>'required',
+            'message'=>'required',
+           
+        ], [
+            'job_application_id.required' => 'Job Application Id is required.',
+         //   'interview_bash_id.required'=>'Bash Id is required.',
+            'job_application_bash_id.required'=>'Bash Id is required.',
+            'message.required'=>'Message is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+        
+        $get_chat=Interview::select('jobs.job_title','users.bash_id','users.name','jobs.skills_required','jobs.experience_required')
+        ->Join('job_applications','job_applications.id','=','interviews.job_application_id')
+        ->Join('jobs','jobs.id','=','job_applications.job_id')
+        ->Join('users','users.id','=','job_applications.job_seeker_id')
+        ->where('job_applications.job_seeker_id','=',$auth->id)
+        ->where('job_applications.id',$request->job_application_id)
+        ->where('job_applications.bash_id',$request->job_application_bash_id)
+        ->where('interviews.job_application_id',$request->job_application_id)
+        ->first();
+        if($get_chat)
+        {
+                $skills = json_decode($get_chat->skills_required, true);
+                $skillsString = is_array($skills) ? implode(', ', $skills) : $get_chat->skills_required;
+    
+                  $job_details=array("user_id"=>$get_chat->bash_id,
+             
+               "firstname"=>$get_chat->name,
+              
+               "skills"=>$skillsString,
+              
+              "role"=>$get_chat->job_title,
+               "experience"=>$get_chat->experience_required,
+               "message"=>$request->message,
+              
+               );
+          
+         
+           $postData = http_build_query($job_details);
+                
+                $ch = curl_init();
+                
+                curl_setopt_array($ch, [
+                    CURLOPT_URL => 'http://34.131.125.195:8000/talk',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
+                    ],
+                ]);
+                
+                $response = curl_exec($ch);
+              curl_close($ch);
+            
+            if (curl_errno($ch)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => curl_error($ch),
+                ]);
+            }
+            
+            $responseData = json_decode($response, true);
+            
+            if (!isset($responseData['session_id'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Session ID not found in response',
+                ]);
+            }
+            
+             $sessionId = $responseData['session_id'];
+           
+           $nextUrl = 'http://34.131.125.195:8000/get_audio/'.urlencode($sessionId);
+            
+            $ch = curl_init();
+            
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $nextUrl,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                ],
+            ]);
+            
+            $nextResponse = curl_exec($ch);
+            curl_close($ch);
+            
+            $responseData2 = json_decode($nextResponse, true);
+             return response()->json([
+                    'status' => true,
+                    'message' =>'Audio',
+                     'data'=>$responseData2
+                ]);
         }
     }
     

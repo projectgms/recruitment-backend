@@ -1050,4 +1050,81 @@ public function get_interview_round()
         }
 
     }
+
+     public function ai_salary_range(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_title' => 'required',
+            'location' => 'array|required',
+            'job_description' => 'required',
+            'skills'=>'array|required',
+            'experience'=>'required'
+
+        ], [
+            'job_title.required' => 'Job Title is required.',
+            'location.required' => 'location is required',
+            'job_description.required' => 'Job Description is required',
+            'skills.required'=>'Skill required. ',
+            'experience.required'=>'Experience required.'
+
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+          $ch = curl_init();
+                 $jd=array("job_title"=>$request->job_title,
+
+                   
+                    "location"=>$request->location,
+                  
+                    "job_description"=>$request->job_description,
+                    "skills"=>$request->skills,
+                    "experience"=>$request->experience
+                  
+                    );
+     
+                              curl_setopt_array($ch, [
+                    CURLOPT_URL => 'https://job-recruiter.onrender.com/predict_salary',
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => json_encode($jd),
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/json',
+                    ],
+                    CURLOPT_FOLLOWLOCATION => true, // Follow redirects
+                    CURLOPT_FAILONERROR => false,   // Show error response bodies
+                ]);
+                        
+                $response = curl_exec($ch);
+        
+                $decoded = json_decode($response, true);
+          
+$rangePart = explode(' ',$decoded['predicted_salary_range'])[0]; // Get "5,00,000–8,00,000"
+$cleanSalary = str_replace([',', '–'], ['', '-'], $rangePart); // Remove commas, replace dash
+
+                  if (curl_errno($ch)) {
+                        return response()->json([
+                        'status' => false,
+                        'message' =>curl_error($ch),
+                        
+                    ]);
+          
+                 }
+                   return response()->json([
+                        'status' => true,
+                        'message' =>'Question Added',
+                        'data'=>$cleanSalary
+                        
+                    ]);
+    }
 }

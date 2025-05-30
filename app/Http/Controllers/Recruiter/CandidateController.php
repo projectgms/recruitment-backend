@@ -13,6 +13,9 @@ use Illuminate\Http\Request;
 use App\Models\JobSeekerProfessionalDetails;
 use Illuminate\Support\Facades\Storage;
 use App\Notifications\Recruiter\UpdateJobApplication;
+use App\Notifications\Recruiter\CandidateInvitation;
+use App\Models\Company;
+
 use App\Models\CandidateSkillTest;
 use App\Models\RecruiterPrepareJob;
 use App\Models\JobApplicationNotification;
@@ -1186,5 +1189,39 @@ class CandidateController extends Controller
                 'message' => 'Job Application Notification Status Changed.',
                
             ]);
+    }
+
+     public function smart_search_invitation(Request $request)
+    {
+         $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'job_title' => 'required', 
+            'location'=>'array|required',
+            'skill'=>'array|required',
+            'name'=>'required',
+            'email'=>'required'
+           
+        ], [
+            'job_title.required' => 'Job Title is required.',
+            'location.required'=>'Location is required.',
+            'skill.required'=>'Skill is required.',
+            'name.required'=>'Name is required.',
+            'email.required'=>'Email is required.'
+          
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+                
+            ], 422);
+        }
+        $get_company=Company::select('name','website')->where('id',$auth->company_id)->where('active','1')->first();
+          Notification::route('mail', $request->email)->notify(new CandidateInvitation($request->name,$request->job_title,$get_company->name,$get_company->website,$request->location,$request->skill));
+
     }
 }
