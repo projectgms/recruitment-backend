@@ -1109,8 +1109,8 @@ public function get_interview_round()
         
                 $decoded = json_decode($response, true);
           
-$rangePart = explode(' ',$decoded['predicted_salary_range'])[0]; // Get "5,00,000–8,00,000"
-$cleanSalary = str_replace([',', '–'], ['', '-'], $rangePart); // Remove commas, replace dash
+                $rangePart = explode(' ',$decoded['predicted_salary_range'])[0]; // Get "5,00,000–8,00,000"
+                $cleanSalary = str_replace([',', '–'], ['', '-'], $rangePart); // Remove commas, replace dash
 
                   if (curl_errno($ch)) {
                         return response()->json([

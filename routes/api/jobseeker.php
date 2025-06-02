@@ -119,7 +119,11 @@ use App\Models\CandidateSkillTest;
        Route::post('jobseeker/mcq_interview_questions',[AppliedJobController::class,'mcq_interview_questions']);
        Route::post('jobseeker/submit_mcq_interview_questions',[AppliedJobController::class,'submit_mcq_interview_questions']);
        Route::post('jobseeker/talk_interview',[AppliedJobController::class,'talk_interview']);
-      Route::post('jobseeker/submit_mock_interview',[AppliedJobController::class,'submit_mock_interview']);
+       Route::post('jobseeker/submit_mock_interview',[AppliedJobController::class,'submit_mock_interview']);
+
+       Route::post('jobseeker/talk_interview_test',[AppliedJobController::class,'talk_interview_test']);
+       Route::post('jobseeker/mock_interview_test_report',[AppliedJobController::class,'mock_interview_test_report']);
+       Route::post('jobseeker/clear_mock_interview_test',[AppliedJobController::class,'clear_mock_interview_test']);
 
        Route::post('jobseeker/submit_ai_resume_analysis',[ResumeController::class,'submit_ai_resume_analysis']);
 
