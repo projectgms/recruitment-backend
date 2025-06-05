@@ -50,7 +50,7 @@ class RecruiterController extends Controller
             }else{
                 return response()->json([
                     "status" => false,
-                    "message" => "Invalid LOgin.",
+                    "message" => "Invalid Login.",
                     "data" => []
                 ]);  // HTTP 403 Forbidden
             }
@@ -96,7 +96,7 @@ class RecruiterController extends Controller
             }else{
                 return response()->json([
                     "status" => false,
-                    "message" => "Invalid LOgin.",
+                    "message" => "Invalid Login.",
                     "data" => []
                 ]);  // HTTP 403 Forbidden
             }

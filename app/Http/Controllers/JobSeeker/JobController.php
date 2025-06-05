@@ -103,7 +103,12 @@ class JobController extends Controller
              
             }
               $job->job_locations = json_decode($job->job_locations, true);
-               $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
+             
+                    if (Carbon::now()->diffInDays(Carbon::parse($job->expiration_date), false) <= 3) {
+                        $job->expiration_time =true;
+                    } else {
+                        $job->expiration_time = false;
+                    }
                 $save_job=SavedJob::select('id')->where('job_id','=',$job->id)->where('jobseeker_id',$auth->id)->first();
                
                 $expirationDate = Carbon::parse($job->expiration_date)->startOfDay();
@@ -111,6 +116,7 @@ class JobController extends Controller
                 
                 $daysDifference = $currentDate->diffInDays($expirationDate, false); 
                    $job->is_hot_job= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
+ $job->expiration_time = Carbon::parse($job->expiration_date)->diffForHumans(); // Human-readable
 
                 if($save_job)
                 {
@@ -282,7 +288,12 @@ class JobController extends Controller
                 
                 $daysDifference = $currentDate->diffInDays($expirationDate, false); 
                    $jobs->is_hot_job= ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
-
+             
+                    if (Carbon::now()->diffInDays(Carbon::parse($jobs->expiration_date), false) <= 3) {
+                        $jobs->expiration_time =true;
+                    } else {
+                        $jobs->expiration_time = false;
+                    }
          $save_job=SavedJob::select('id')->where('job_id','=',$jobs->id)->where('jobseeker_id',$auth->id)->first();
                 
                 if($save_job)
@@ -362,7 +373,7 @@ class JobController extends Controller
             'companies.company_logo',
             'companies.name as company_name',
             'companies.locations as company_locations',
-              'companies.company_description'
+            'companies.company_description'
         )
             ->leftJoin('companies', 'jobs.company_id', '=', 'companies.id')
             ->where('jobs.status', 'Active')
@@ -751,9 +762,9 @@ class JobController extends Controller
             $jobSeekerSkills = array_map('trim', explode(',', $get_skills->skills));
         }
         $jobs = JobPostNotification::select(
-            'jobs.id as job_id',
-            'job_post_notifications.id',
-            'jobs.bash_id as job_bash_id',
+            'jobs.id as id',
+            'job_post_notifications.id as notification_id',
+            'jobs.bash_id as bash_id',
             'job_post_notifications.type',
             'job_post_notifications.message',
                         'job_post_notifications.created_at',

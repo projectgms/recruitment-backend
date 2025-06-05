@@ -55,6 +55,15 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
         ],
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GCP_PROJECT_ID'),
+            'key_file' => storage_path('app/google-cloud-key.json'), // Path to JSON service account
+            'bucket' => env('GCP_BUCKET'),
+            'path_prefix' => null,
+            'storage_api_uri' => null,
+            'visibility' => 'public',
+        ],
 
     ],
 

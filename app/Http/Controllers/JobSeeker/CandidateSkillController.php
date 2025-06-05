@@ -238,14 +238,10 @@ class CandidateSkillController extends Controller
         $validator = Validator::make($request->all(), [
             'skill' => 'required',
             'answers'=>'array|required',
-           
-          
-        ], [
+           ], [
             'skill.required' => 'Skill is required.',
             'answers.required'=>'answers is required.',
-            
-          
-        ]);
+           ]);
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
@@ -253,9 +249,9 @@ class CandidateSkillController extends Controller
 
             ], 422);
         }
-  $answers = [];
-    $score=0;
-    $total=0;
+        $answers = [];
+        $score=0;
+        $total=0;
         // Handle file uploads
         $i = 1;
         foreach ($request->answers as $key => $answer) {
