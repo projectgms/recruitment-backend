@@ -1,4 +1,6 @@
-<?php namespace Database\Seeders;
+<?php
+
+namespace Database\Seeders;
 
 use App\Models\InterviewRound;
 use Illuminate\Database\Seeder;
@@ -15,218 +17,108 @@ class AllDataSeeder extends Seeder
     public function run()
     {
 
-           // Create SuperAdmin Role
-         $rounds=[  [
-          
-            'bash_id'=>Str::uuid(),
-            'round_name' => 'MCQ Test',
-           
-        ],
-         [
-            'bash_id'=>Str::uuid(),
-            'round_name' => 'Mock Interview',
-           
-        ],
-        [
-            'bash_id'=>Str::uuid(),
-            'round_name' => 'Technical Test',
-           
-        ],
-        [
-            'bash_id'=>Str::uuid(),
-            'round_name' => 'Technical Interview',
-           
-        ],
-        [
-            'bash_id'=>Str::uuid(),
-            'round_name' => 'HR Round',
-           
-        ],
-    ];
-    foreach ($rounds as $rnd) {
-        InterviewRound::firstOrCreate($rnd);
-    }
-        // Create SuperAdmin Role
-        $superAdminRole = SuperAdminRole::firstOrCreate([
-            'role' => 'super_admin',
-            'bash_id'=>Str::uuid(),
-            'parent_id' => 0,  // Root level for 
-            'status'=>'Active',
-            'active' => 1,
-        ]);
-
-        // Create Recruiter Role
-        $recruiterRole = RecruiterRole::firstOrCreate([
-            'role' => 'recruiter',
-            'bash_id'=>Str::uuid(),
-            'parent_id' => 0,  // Root level for Recruiter
-            'status'=>'Active',
-            'active' => 1,
-        ]);
-
-        // Create Default SuperAdmin User
-        $password=bcrypt('12345');
-        $superAdminUser = User::firstOrCreate([
-            'email' => 'superadmin@example.com',
-        ], [
-            'name' => 'SuperAdmin User',
-            'password' =>$password,
-            'role_id' => $superAdminRole->id,
-            'role' => $superAdminRole->role,
-            'mobile'=>9657899983,
-            'oauth_provider'=>'email_password',
-            'status'=>'active',
-            'bash_id'=>Str::uuid(),
-            'company_id' => null,  // Assuming SuperAdmin doesn't need a company
-            'active' => 1,
-            'last_login' => Carbon::now(),
-        ]);
-
-      
-
-        $hrAdminRole = RecruiterRole::firstOrCreate([
-            'role' => 'HR-Admin',
-            'bash_id'=>Str::uuid(),
-            'parent_id' => $recruiterRole->id, // Set recruiter role as parent
-            'status'=>'Active',
-            'active' => 1,
-        ]);
-
-        $managerRole = RecruiterRole::firstOrCreate([
-            'role' => 'Manager',
-            'bash_id'=>Str::uuid(),
-            'parent_id' => $recruiterRole->id, // Set recruiter role as parent
-            'status'=>'Active',
-            'active' => 1,
-        ]);
-
-         $employeeRole = RecruiterRole::firstOrCreate([
-            'role' => 'Employee',
-            'bash_id'=>Str::uuid(),
-            'parent_id' => $recruiterRole->id, // Set recruiter role as parent
-            'status'=>'Active',
-            'active' => 1,
-        ]);
-
-        // Insert Default Permissions for SuperAdmin
-        $superAdminPermissions = [
-         
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'admin-dashboard',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'jobseeker-management',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'recruiter-management',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'subscription-payment',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'reports-analytics',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'user-management',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'role-management',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'role-permission',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'profile',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'setting',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ],
-            [
-                'role_id' => $superAdminRole->id,
-                'bash_id'=>Str::uuid(),
-                'company_id' => null,
-                'menu' => 'earning',
-                'view' => 1,
-                'add' => 1,
-                'edit' => 1,
-                'delete' => 1,
-            ]
-
+        // Create Interview Rounds
+        $rounds = [
+            'MCQ Test',
+            'Mock Interview',
+            'Technical Test',
+            'Technical Interview',
+            'HR Round',
         ];
 
-        // Insert permissions into the RolePermission table
-        foreach ($superAdminPermissions as $permission) {
-            RolePermission::firstOrCreate($permission);
+        foreach ($rounds as $name) {
+            InterviewRound::firstOrCreate(
+                ['round_name' => $name],
+                ['bash_id' => Str::uuid()]
+            );
+        }
+
+        // Create SuperAdmin Role
+        $superAdminRole = SuperAdminRole::firstOrCreate(
+            ['role' => 'super_admin'],
+            [
+                'bash_id' => Str::uuid(),
+                'parent_id' => 0,
+                'status' => 'Active',
+                'active' => 1,
+            ]
+        );
+
+        // Create Recruiter Role
+        $recruiterRole = RecruiterRole::firstOrCreate(
+            ['role' => 'recruiter'],
+            [
+                'bash_id' => Str::uuid(),
+                'parent_id' => 0,
+                'status' => 'Active',
+                'active' => 1,
+            ]
+        );
+
+        // Create Default SuperAdmin User
+        $password = bcrypt('12345');
+        $superAdminUser = User::firstOrCreate(
+            ['email' => 'superadmin@example.com'],
+            [
+                'name' => 'SuperAdmin User',
+                'password' => $password,
+                'role_id' => $superAdminRole->id,
+                'role' => $superAdminRole->role,
+                'mobile' => 9657899983,
+                'oauth_provider' => 'email_password',
+                'status' => 'active',
+                'bash_id' => Str::uuid(),
+                'company_id' => null,
+                'active' => 1,
+                'last_login' => Carbon::now(),
+            ]
+        );
+
+        // Create Sub Roles under Recruiter
+        $subRoles = ['HR-Admin', 'Manager', 'Employee'];
+        foreach ($subRoles as $role) {
+            RecruiterRole::firstOrCreate(
+                ['role' => $role],
+                [
+                    'bash_id' => Str::uuid(),
+                    'parent_id' => $recruiterRole->id,
+                    'status' => 'Active',
+                    'active' => 1,
+                ]
+            );
+        }
+
+        // Insert Default Permissions for SuperAdmin
+        $menus = [
+            'admin-dashboard',
+            'jobseeker-management',
+            'recruiter-management',
+            'subscription-payment',
+            'reports-analytics',
+            'user-management',
+            'role-management',
+            'role-permission',
+            'profile',
+            'setting',
+            'earning',
+           
+        ];
+
+        foreach ($menus as $menu) {
+            RolePermission::firstOrCreate(
+                [
+                    'role_id' => $superAdminRole->id,
+                    'menu' => $menu,
+                ],
+                [
+                    'bash_id' => Str::uuid(),
+                    'company_id' => null,
+                    'view' => 1,
+                    'add' => 1,
+                    'edit' => 1,
+                    'delete' => 1,
+                ]
+            );
         }
 
         // Add any other default data here if needed

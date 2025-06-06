@@ -24,7 +24,8 @@ use App\Models\InterviewRound;
 
 use App\Models\SkillAssQuestion;
 use Illuminate\Support\Facades\Cache;
- use Twilio\Rest\Client;
+use Twilio\Rest\Client;
+use App\Helpers\FileHelper;
 
 
 use Illuminate\Support\Facades\Hash;
@@ -213,18 +214,16 @@ class InterviewController extends Controller
                 }
                 $candidate->open_to_work = $candidate->open_to_work == 1;
 
-                // Resume
+                  // Resume
                 if ($candidate->resume) {
-                    $candidate->resume = $disk === 's3'
-                        ? Storage::disk('s3')->url($candidate->resume)
-                        : env('APP_URL') . Storage::url('app/public/' . $candidate->resume);
+                     $candidate->resume =FileHelper::getFileUrl($candidate->resume);
+                    
                 }
 
                 // Profile Picture
                 if ($candidate->profile_picture) {
-                    $candidate->profile_picture = $disk === 's3'
-                        ? Storage::disk('s3')->url($candidate->profile_picture)
-                        : env('APP_URL') . Storage::url('app/public/' . $candidate->profile_picture);
+                      $candidate->profile_picture =FileHelper::getFileUrl($candidate->profile_picture);
+                   
                 }
 
                 // Skill Test
@@ -235,11 +234,11 @@ class InterviewController extends Controller
                 return $candidate;
             });
 
-    return response()->json([
-        'status' => true,
-        'message' => 'Interview Round',
-        'data' => $candidates
-    ]);
+            return response()->json([
+                'status' => true,
+                'message' => 'Interview Round',
+                'data' => $candidates
+            ]);
     }
     
       public function update_candidate_interview_status(Request $request)
@@ -277,8 +276,7 @@ class InterviewController extends Controller
                foreach ($interview as $interview) {
 
                 $update_status = Interview::where('id', $interview->id)->where('round_id',$request->round_id)
-                  
-                    ->first();
+                ->first();
           if($update_status)
           {
             
@@ -323,7 +321,7 @@ class InterviewController extends Controller
                         $insert_new_round->interview_date =  $request->interview_date;
                         $insert_new_round->interview_mode = $request->interview_mode;
                         $insert_new_round->interview_link = $request->interview_link;
-                          $insert_new_round->room_id = $request->meeting_room_id;
+                        $insert_new_round->room_id = $request->meeting_room_id;
                         $insert_new_round->interviewer_id= $request->interviewer_id ? $request->interviewer_id : 0;
                         $insert_new_round->status = 'Shortlisted';
                         $insert_new_round->save();
@@ -332,7 +330,7 @@ class InterviewController extends Controller
                         if($update_job_application)
                            {
                               JobApplication::where('id', $update_status->job_application_id)
-            ->update(['status' => $request->status]);
+                            ->update(['status' => $request->status]);
 
                            }
                      }else{

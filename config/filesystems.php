@@ -32,7 +32,7 @@ return [
 
         'local' => [
             'driver' => 'local',
-            'root' => storage_path('app'),
+            'root' => storage_path('app/public'),
             'throw' => false,
         ],
 
@@ -54,6 +54,15 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
+        ],
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GCP_PROJECT_ID'),
+            'key_file' => storage_path('app/google-cloud-key.json'), // Path to JSON service account
+            'bucket' => env('GCP_BUCKET'),
+            'path_prefix' => null,
+            'storage_api_uri' => null,
+            'visibility' => 'public',
         ],
 
     ],

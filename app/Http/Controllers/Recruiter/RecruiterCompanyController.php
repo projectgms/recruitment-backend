@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanyEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Helpers\FileHelper;
 
 class RecruiterCompanyController extends Controller
 {
@@ -47,13 +48,8 @@ class RecruiterCompanyController extends Controller
         if ($company) {
             // Modify the company logo to include the full URL if it exists
             if ($company->company_logo) {
-                if ($disk === 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $company->company_logo = Storage::disk('s3')->url($company->company_logo);
-                } else {
-                    // Default to local
-                    $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
-                }
+
+                $company->company_logo = FileHelper::getFileUrl($company->company_logo);
             } else {
                 $company->company_logo = null; // Or use a default image URL
             }
@@ -118,32 +114,16 @@ class RecruiterCompanyController extends Controller
         $company = Company::where('id', $auth->company_id)->where('active', '1')->first();
         if ($company) {
             if ($request->hasFile("company_logo")) {
+
                 if ($company->company_logo) {
-                    // Get the file path to delete
-                    $existingFilePath = $company->company_logo;
-                    if ($disk == 'local') {
-
-                        Storage::disk('public')->delete($existingFilePath);
-                    } elseif ($disk == 's3') {
-
-                        Storage::disk('s3')->delete($existingFilePath);
-                    }
+                    FileHelper::deleteFile($company->company_logo);
                 }
 
-                $extension = $request->file('company_logo')->getClientOriginalExtension();
+                $storedPath = FileHelper::storeFile($request, 'company_logo', 'company_logo');
 
-                $filename = time() . '.' . $extension;
-
-                if ($disk == 'local') {
-
-                    $imagePath = $request->file('company_logo')->storeAs('company_logo', $filename, 'public');
-                } elseif ($disk == 's3') {
-
-                    $imagePath = $request->file('company_logo')->storeAs('company_logo', $filename, 's3');
-                }
-
-                $company->company_logo = $imagePath;
+                $company->company_logo = $storedPath;
             }
+
             $company->name = $request->name;
             $company->website = $request->website;
             $company->company_size = $request->company_size;
@@ -208,16 +188,9 @@ class RecruiterCompanyController extends Controller
 
                 foreach ($request->file('event_images') as $file) {
 
-                    $extension = $file->getClientOriginalExtension();
-                    $filename = time() . '_' . uniqid() . '.' . $extension;
+                    $storedPath = FileHelper::storeFile($request,  $file, 'company_events');
 
-                    if ($disk == 'local') {
-                        $path = $file->storeAs('company_events', $filename, 'public');
-                    } elseif ($disk == 's3') {
-                        $path = $file->storeAs('company_events', $filename, 's3');
-                    }
-
-                    $imagePaths[] = $path;
+                    $imagePaths[] = $storedPath;
                 }
 
                 // Store as JSON or however you prefer
@@ -239,7 +212,7 @@ class RecruiterCompanyController extends Controller
         if (!$auth) {
             return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
         }
-        $company = CompanyEvent::select('id', 'bash_id', 'title', 'event_images', 'description')->where('company_id', $auth->company_id)->where('active', '1')->orderBy('id','desc')->get();
+        $company = CompanyEvent::select('id', 'bash_id', 'title', 'event_images', 'description')->where('company_id', $auth->company_id)->where('active', '1')->orderBy('id', 'desc')->get();
         if ($company) {
             $company->transform(function ($company) {
                 $disk = env('FILESYSTEM_DISK'); // 'local' or 's3'
@@ -249,11 +222,8 @@ class RecruiterCompanyController extends Controller
                     $imageUrls = [];
 
                     foreach ($images as $image) {
-                        if ($disk === 's3') {
-                            $imageUrls[] = Storage::disk('s3')->url($image);
-                        } else {
-                            $imageUrls[] = env('APP_URL') . Storage::url('app/public/' . $image);
-                        }
+                           $imageUrls[] = FileHelper::getFileUrl($image);
+                      
                     }
 
                     $company->event_images = $imageUrls; // Assign the array of full URLs
@@ -274,20 +244,19 @@ class RecruiterCompanyController extends Controller
     public function delete_company_event(Request $request)
     {
 
-    $auth = JWTAuth::user();
-    if (!$auth) {
-        return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
-    }
-       $validator = Validator::make($request->all(), [
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
+        }
+        $validator = Validator::make($request->all(), [
 
             'id' => 'required',
             'bash_id' => 'required',
-           
+
         ], [
             'id.required' => 'Id is required.',
-
             'bash_id.required' => 'Bash Id is required.',
-           
+
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -297,35 +266,32 @@ class RecruiterCompanyController extends Controller
             ], 422);
         }
 
-    $event = CompanyEvent::where('id', $request->id)
-        ->where('company_id', $auth->company_id)
-        ->where('bash_id',$request->bash_id)
-        ->first();
+        $event = CompanyEvent::where('id', $request->id)
+            ->where('company_id', $auth->company_id)
+            ->where('bash_id', $request->bash_id)
+            ->first();
 
-    if (!$event) {
-        return response()->json(['status' => false, 'message' => 'Event not found.'], 404);
-    }
+        if (!$event) {
+            return response()->json(['status' => false, 'message' => 'Event not found.'], 404);
+        }
 
-    $images = json_decode($event->event_images, true);
+        $images = json_decode($event->event_images, true);
 
-    if (!empty($images)) {
-        $disk = env('FILESYSTEM_DISK', 'public');
+        if (!empty($images)) {
+            $disk = env('FILESYSTEM_DISK', 'public');
 
-        foreach ($images as $image) {
-            if ($disk === 's3') {
-                Storage::disk('s3')->delete($image);
-            } else {
-                Storage::disk('public')->delete($image);
+            foreach ($images as $image) {
+                    FileHelper::deleteFile($image);
+               
             }
         }
-    }
 
-   $event->delete();
+        $event->delete();
 
-    return response()->json([
-        'status' => true,
-        'message' => 'All event images deleted successfully.',
-       
-    ]);
+        return response()->json([
+            'status' => true,
+            'message' => 'All event images deleted successfully.',
+
+        ]);
     }
 }

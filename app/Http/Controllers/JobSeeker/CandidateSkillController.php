@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Models\JobSeekerProfessionalDetails;
 use App\Models\JobSeekerContactDetails;
 use App\Models\SkillAssQuestion;
+use App\Helpers\FileHelper;
 
 class CandidateSkillController extends Controller
 {
@@ -194,7 +195,7 @@ class CandidateSkillController extends Controller
                             $query->orWhereRaw("LOWER(skill) LIKE ?", ['%' . $word . '%']);
                         }
                     }
-    })
+                })
                 ->inRandomOrder()
                 ->limit(10)
                 ->get();
@@ -238,14 +239,10 @@ class CandidateSkillController extends Controller
         $validator = Validator::make($request->all(), [
             'skill' => 'required',
             'answers'=>'array|required',
-           
-          
-        ], [
+           ], [
             'skill.required' => 'Skill is required.',
             'answers.required'=>'answers is required.',
-            
-          
-        ]);
+           ]);
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
@@ -253,9 +250,9 @@ class CandidateSkillController extends Controller
 
             ], 422);
         }
-  $answers = [];
-    $score=0;
-    $total=0;
+        $answers = [];
+        $score=0;
+        $total=0;
         // Handle file uploads
         $i = 1;
         foreach ($request->answers as $key => $answer) {
@@ -306,7 +303,7 @@ class CandidateSkillController extends Controller
               $jsonData = [
                 'valid_answer' =>$answers,
                 'score' => $score,
-                 'total'=>$total
+                'total'=>$total
             ];
             return response()->json(['status' => true,'data'=>$jsonData, 'message' => 'Retest Submitted.'], 200);
         }
@@ -330,14 +327,14 @@ class CandidateSkillController extends Controller
     
              $scoreWithBatch= $score->map(function ($item) {
              if ($item->score >= 9 && $item->score <= 10) {
-            $item->batch_type = 'Gold';
-        } elseif ($item->score >= 7 && $item->score <= 8) {
-            $item->batch_type = 'Silver';
-        } elseif ($item->score >= 5 && $item->score <= 6) {
-            $item->batch_type = 'Bronze';
-        } else {
-            $item->batch_type = null;
-        }
+                 $item->batch_type = 'Gold';
+            } elseif ($item->score >= 7 && $item->score <= 8) {
+                $item->batch_type = 'Silver';
+            } elseif ($item->score >= 5 && $item->score <= 6) {
+                $item->batch_type = 'Bronze';
+            } else {
+                $item->batch_type = null;
+            }
 
         // Set batch true/false based on score >=5
         $item->batch = ($item->score >= 5) ? true : false;
