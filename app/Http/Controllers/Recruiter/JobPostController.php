@@ -25,6 +25,7 @@ use App\Models\JobApplicationNotification;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use App\Helpers\FileHelper;
 
 use function Ramsey\Uuid\v1;
 

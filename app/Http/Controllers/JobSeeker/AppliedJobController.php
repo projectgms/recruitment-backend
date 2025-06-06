@@ -25,6 +25,7 @@ use App\Models\SkillAssQuestion;
 use Illuminate\Support\Facades\Cache;
 
 use Illuminate\Support\Facades\Hash;
+use App\Helpers\FileHelper;
 
 
 class AppliedJobController extends Controller
@@ -73,13 +74,7 @@ class AppliedJobController extends Controller
 
                 // Modify the company logo to include the full URL if it exists
                 if ($job->company_logo) {
-                    if ($disk === 's3') {
-                        // For S3, use Storage facade with the 's3' disk
-                        $job->company_logo = Storage::disk('s3')->url($job->company_logo);
-                    } else {
-                        // Default to local
-                        $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
-                    }
+                    $job->company_logo = FileHelper::getFileUrl($job->company_logo);
                 } else {
                     // If no logo exists, set it to null or a default image URL
                     $job->company_logo = null; // Replace with a default image URL if needed
@@ -345,10 +340,10 @@ class AppliedJobController extends Controller
     }
 
 
-         public function submit_mock_interview(Request $request)
+    public function submit_mock_interview(Request $request)
     {
         $auth = JWTAuth::user();
-       
+
         if (!$auth) {
             return response()->json([
                 'status' => false,
@@ -358,15 +353,15 @@ class AppliedJobController extends Controller
 
         $validator = Validator::make($request->all(), [
             'job_application_id' => 'required',
-            'company_id'=>'required',
+            'company_id' => 'required',
             'round_id' => 'required',
-            'user_chat_id'=>'required',
-          
+            'user_chat_id' => 'required',
+
         ], [
             'job_application_id.required' => 'Job Application Id is required.',
-            'company_id.required'=>'Company Id is required.',
+            'company_id.required' => 'Company Id is required.',
             'round_id.required' => 'Round Id is required',
-           'user_chat_id.required'=>'user_chat_id is required'
+            'user_chat_id.required' => 'user_chat_id is required'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -375,340 +370,104 @@ class AppliedJobController extends Controller
 
             ], 422);
         }
-          $check_test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->count();
-        if ($check_test>0)
-        {
-            $test= Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id',$request->job_application_id)->where('company_id',$request->company_id)->where('round_id',$request->round_id)->first();
-           
-                  $job_details=array("user_id"=>$request->user_chat_id,
-             
-               
-               );
-          
-         
-           $postData = http_build_query($job_details);
-                
-                $ch = curl_init();
-                
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response = curl_exec($ch);
-              curl_close($ch);
-            
-            if (curl_errno($ch)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => curl_error($ch),
-                ]);
-            }
-            
-            $responseData = json_decode($response, true);
-           if (isset($responseData['report']))
-           {
-                $test->interview_report = $responseData['report'];
-          
-           }else{
-                  $test->interview_report = '';
-           }
-           
-            
-             $test->status = 'Completed';
-            $test->save();
-            
-            //clear Chat
-             $user_chat_id=array("user_id"=>$request->user_chat_id );
-          
-         
-           $postuserData = http_build_query($user_chat_id);
-                
-                $ch1 = curl_init();
-                
-                curl_setopt_array($ch1, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postuserData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/json', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response1 = curl_exec($ch1);
-              curl_close($ch1);
-              
-            return response()->json(['status' => true, 'message' => ' Submitted.']);
-        }else{
-            return response()->json(['status' => false, 'message' => ' No round found.']);  
-        }
-    }
-    
-    public function talk_interview(Request $request)
-    {
-       $auth=JWTAuth::user();
-       if(!$auth)
-       {
-           return response()->json([
-               'status'=>false,
-               'message'=>'Unauthorized'],401);
-       }
-       
-        $validator = Validator::make($request->all(), [
-            'job_application_id' => 'required',
-            'job_application_bash_id'=>'required',
-           // 'interview_id'=>'required',
-            'message'=>'required',
-            'user_chat_id'=>'required',
-           
-        ], [
-            'job_application_id.required' => 'Job Application Id is required.',
-         //   'interview_bash_id.required'=>'Bash Id is required.',
-            'job_application_bash_id.required'=>'Bash Id is required.',
-            'message.required'=>'Message is required.',
-            'user_chat_id.required'=>'user_chat_id required'
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors(),
+        $check_test = Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id', $request->job_application_id)->where('company_id', $request->company_id)->where('round_id', $request->round_id)->count();
+        if ($check_test > 0) {
+            $test = Interview::where('jobseeker_id', '=', $auth->id)->where('job_application_id', $request->job_application_id)->where('company_id', $request->company_id)->where('round_id', $request->round_id)->first();
 
-            ], 422);
-        }
-        
-        $get_chat=Interview::select('jobs.job_title','users.bash_id','users.name','jobs.skills_required','jobs.experience_required')
-        ->Join('job_applications','job_applications.id','=','interviews.job_application_id')
-        ->Join('jobs','jobs.id','=','job_applications.job_id')
-        ->Join('users','users.id','=','job_applications.job_seeker_id')
-        ->where('job_applications.job_seeker_id','=',$auth->id)
-        ->where('job_applications.id',$request->job_application_id)
-        ->where('job_applications.bash_id',$request->job_application_bash_id)
-        ->where('interviews.job_application_id',$request->job_application_id)
-        ->first();
-        if($get_chat)
-        {
-                $skills = json_decode($get_chat->skills_required, true);
-                $skillsString = is_array($skills) ? implode(', ', $skills) : $get_chat->skills_required;
-    
-                  $job_details=array("user_id"=>$request->user_chat_id,
-             
-               "firstname"=>$get_chat->name,
-              
-               "skills"=>$skillsString,
-              
-              "role"=>$get_chat->job_title,
-               "experience"=>$get_chat->experience_required,
-               "message"=>$request->message,
-              
-               );
-          
-         
-           $postData = http_build_query($job_details);
-                
-                $ch = curl_init();
-                
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/talk',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response = curl_exec($ch);
-              curl_close($ch);
-            
-            if (curl_errno($ch)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => curl_error($ch),
-                ]);
-            }
-            
-            $responseData = json_decode($response, true);
-            
-            if (!isset($responseData['session_id'])) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Session ID not found in response',
-                ]);
-            }
-            
-             $sessionId = $responseData['session_id'];
-           sleep(5); // ⏱️ Delay added here
-           $nextUrl = 'http://34.131.125.195:8000/get_audio/'.urlencode($request->user_chat_id);
-            
-                $ch = curl_init();
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => $nextUrl,
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                    ],
-                ]);
-            
-                $nextResponse = curl_exec($ch);
-                curl_close($ch);
-            
-                $responseData2 = json_decode($nextResponse, true);
-              
-              
-          //  $responseData2 = json_decode($nextResponse, true);
-             return response()->json([
-                    'status' => true,
-                    'message' =>'Audio',
-                     'data'=>$responseData2
-                ]);
-        }
-    }
-      public function talk_interview_test(Request $request)
-    {
-       $auth=JWTAuth::user();
-       if(!$auth)
-       {
-           return response()->json([
-               'status'=>false,
-               'message'=>'Unauthorized'],401);
-       }
-       
-        $validator = Validator::make($request->all(), [
-           
-            'role'=>'required',
-            'message'=>'required',
-            'skills'=>'array|required',
-            'experience'=>'required',
-            'user_chat_id'=>'required'
-        ], [
-            
-            'role.required'=>'role is required.',
-            'message.required'=>'Message is required.',
-            'skills.required'=>'Skills required.',
-            'experience.required'=>'Experience required.',
-            'user_chat_id.required'=>'user_chat_id required.'
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                'status' => false,
-                'message' => $validator->errors(),
+            $job_details = array(
+                "user_id" => $request->user_chat_id,
 
-            ], 422);
-        }
-        
-        $get_chat=User::select('users.bash_id','users.name','jobseeker_professional_details.skills','job_seeker_contact_details.total_year_exp','job_seeker_contact_details.total_month_exp')
-        ->Join('jobseeker_professional_details','jobseeker_professional_details.user_id','=','users.id')
-        ->Join('job_seeker_contact_details','job_seeker_contact_details.user_id','=','users.id')
-        
-        ->where('users.id','=',$auth->id)
-        ->where('users.bash_id',$auth->bash_id)
-       
-        ->first();
-        if($get_chat)
-        {
-                $skills = $request->skills;
-                $skillsString = is_array($skills) ? implode(', ', $skills) : $request->skills;
-   
-                  $job_details=array("user_id"=>$request->user_chat_id,
-             
-               "firstname"=>$get_chat->name,
-              
-               "skills"=>$skillsString,
-              
-              "role"=>$request->role,
-               "experience"=>$get_chat->total_year_exp.' '.$get_chat->total_month_exp,
-               "message"=>$request->message,
-              
-               );
-          
-         
-           $postData = http_build_query($job_details);
-                
-                $ch = curl_init();
-                
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/talk',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response = curl_exec($ch);
-              curl_close($ch);
-            
-            if (curl_errno($ch)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => curl_error($ch),
-                ]);
-            }
-            
-            $responseData = json_decode($response, true);
-            
-            if (!isset($responseData['session_id'])) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Session ID not found in response',
-                ]);
-            }
-            
-             $sessionId = $responseData['session_id'];
-           sleep(5); 
-           $nextUrl = 'http://34.131.125.195:8000/get_audio/'.urlencode($request->user_chat_id);
-        
+
+            );
+
+
+            $postData = http_build_query($job_details);
+
             $ch = curl_init();
+
             curl_setopt_array($ch, [
-                CURLOPT_URL => $nextUrl,
+                CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
                 CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
                 CURLOPT_HTTPHEADER => [
                     'Accept: application/json',
+                    'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
                 ],
             ]);
-        
-            $nextResponse = curl_exec($ch);
+
+            $response = curl_exec($ch);
             curl_close($ch);
-        
-            $responseData2 = json_decode($nextResponse, true);
-            
-            //$responseData2 = json_decode($nextResponse, true);
-             return response()->json([
-                    'status' => true,
-                    'message' =>'Audio',
-                     'data'=>$responseData2
+
+            if (curl_errno($ch)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => curl_error($ch),
                 ]);
+            }
+
+            $responseData = json_decode($response, true);
+            if (isset($responseData['report'])) {
+                $test->interview_report = $responseData['report'];
+            } else {
+                $test->interview_report = '';
+            }
+
+
+            $test->status = 'Completed';
+            $test->save();
+
+            //clear Chat
+            $user_chat_id = array("user_id" => $request->user_chat_id);
+
+
+            $postuserData = http_build_query($user_chat_id);
+
+            $ch1 = curl_init();
+
+            curl_setopt_array($ch1, [
+                CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postuserData, // 🟢 SEND AS FORM
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Content-Type: application/json', // 🧠 CRUCIAL HEADER
+                ],
+            ]);
+
+            $response1 = curl_exec($ch1);
+            curl_close($ch1);
+
+            return response()->json(['status' => true, 'message' => ' Submitted.']);
+        } else {
+            return response()->json(['status' => false, 'message' => ' No round found.']);
         }
     }
-     public function mock_interview_test_report(Request $request)
+
+    public function talk_interview(Request $request)
     {
         $auth = JWTAuth::user();
-       
         if (!$auth) {
             return response()->json([
                 'status' => false,
-                'message' => 'Unauthorized',
+                'message' => 'Unauthorized'
             ], 401);
         }
+
         $validator = Validator::make($request->all(), [
-           
-           
-            'user_chat_id'=>'required'
+            'job_application_id' => 'required',
+            'job_application_bash_id' => 'required',
+            // 'interview_id'=>'required',
+            'message' => 'required',
+            'user_chat_id' => 'required',
+
         ], [
-            
-           
-            'user_chat_id.required'=>'user_chat_id'
+            'job_application_id.required' => 'Job Application Id is required.',
+            //   'interview_bash_id.required'=>'Bash Id is required.',
+            'job_application_bash_id.required' => 'Bash Id is required.',
+            'message.required' => 'Message is required.',
+            'user_chat_id.required' => 'user_chat_id required'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -717,56 +476,291 @@ class AppliedJobController extends Controller
 
             ], 422);
         }
-        
-        
-        $job_details=array("user_id"=>$request->user_chat_id,
-         );
-          
-         
-           $postData = http_build_query($job_details);
-                
-                $ch = curl_init();
-                
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response = curl_exec($ch);
-              curl_close($ch);
-            
+
+        $get_chat = Interview::select('jobs.job_title', 'users.bash_id', 'users.name', 'jobs.skills_required', 'jobs.experience_required')
+            ->Join('job_applications', 'job_applications.id', '=', 'interviews.job_application_id')
+            ->Join('jobs', 'jobs.id', '=', 'job_applications.job_id')
+            ->Join('users', 'users.id', '=', 'job_applications.job_seeker_id')
+            ->where('job_applications.job_seeker_id', '=', $auth->id)
+            ->where('job_applications.id', $request->job_application_id)
+            ->where('job_applications.bash_id', $request->job_application_bash_id)
+            ->where('interviews.job_application_id', $request->job_application_id)
+            ->first();
+        if ($get_chat) {
+            $skills = json_decode($get_chat->skills_required, true);
+            $skillsString = is_array($skills) ? implode(', ', $skills) : $get_chat->skills_required;
+
+            $job_details = array(
+                "user_id" => $request->user_chat_id,
+
+                "firstname" => $get_chat->name,
+
+                "skills" => $skillsString,
+
+                "role" => $get_chat->job_title,
+                "experience" => $get_chat->experience_required,
+                "message" => $request->message,
+
+            );
+
+
+            $postData = http_build_query($job_details);
+
+            $ch = curl_init();
+
+            curl_setopt_array($ch, [
+                CURLOPT_URL => 'http://34.131.125.195:8000/talk',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
+                ],
+            ]);
+
+            $response = curl_exec($ch);
+            curl_close($ch);
+
             if (curl_errno($ch)) {
                 return response()->json([
                     'status' => false,
                     'message' => curl_error($ch),
                 ]);
             }
-            
+
             $responseData = json_decode($response, true);
-                   if (isset($responseData['report'])) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Report fetched successfully.',
-                    'data' => $responseData['report']
-                ]);
-            } else {
+
+            if (!isset($responseData['response'])) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Report not available.',
-                    'data' => null
+                    'message' => 'Session ID not found in response',
                 ]);
             }
+
+            //      $sessionId = $responseData['session_id'];
+            //    sleep(5); // ⏱️ Delay added here
+            //    $nextUrl = 'http://34.131.125.195:8000/get_audio/'.urlencode($request->user_chat_id);
+
+            //         $ch = curl_init();
+            //         curl_setopt_array($ch, [
+            //             CURLOPT_URL => $nextUrl,
+            //             CURLOPT_RETURNTRANSFER => true,
+            //             CURLOPT_HTTPHEADER => [
+            //                 'Accept: application/json',
+            //             ],
+            //         ]);
+
+            //         $nextResponse = curl_exec($ch);
+            //         curl_close($ch);
+
+            //         $responseData2 = json_decode($nextResponse, true);
+
+
+            //  $responseData2 = json_decode($nextResponse, true);
+            return response()->json([
+                'status' => true,
+                'message' => 'Audio',
+                'data' => $responseData['response']
+            ]);
+        }
+    }
+    public function talk_interview_test(Request $request)
+    {
+        $auth = JWTAuth::user();
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+
+            'role' => 'required',
+            'message' => 'required',
+            'skills' => 'array|required',
+            'experience' => 'required',
+            'user_chat_id' => 'required'
+        ], [
+
+            'role.required' => 'role is required.',
+            'message.required' => 'Message is required.',
+            'skills.required' => 'Skills required.',
+            'experience.required' => 'Experience required.',
+            'user_chat_id.required' => 'user_chat_id required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+        $get_chat = User::select('users.bash_id', 'users.name', 'jobseeker_professional_details.skills', 'job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp')
+            ->Join('jobseeker_professional_details', 'jobseeker_professional_details.user_id', '=', 'users.id')
+            ->Join('job_seeker_contact_details', 'job_seeker_contact_details.user_id', '=', 'users.id')
+
+            ->where('users.id', '=', $auth->id)
+            ->where('users.bash_id', $auth->bash_id)
+
+            ->first();
+        if ($get_chat) {
+            $skills = $request->skills;
+            $skillsString = is_array($skills) ? implode(', ', $skills) : $request->skills;
+
+            $job_details = array(
+                "user_id" => $request->user_chat_id,
+
+                "firstname" => $get_chat->name,
+
+                "skills" => $skillsString,
+
+                "role" => $request->role,
+                "experience" => $get_chat->total_year_exp . ' ' . $get_chat->total_month_exp,
+                "message" => $request->message,
+
+            );
+
+
+            $postData = http_build_query($job_details);
+
+            $ch = curl_init();
+
+            curl_setopt_array($ch, [
+                CURLOPT_URL => 'http://34.131.125.195:8000/talk',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+                CURLOPT_HTTPHEADER => [
+                    'Accept: application/json',
+                    'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
+                ],
+            ]);
+
+            $response = curl_exec($ch);
+            curl_close($ch);
+
+            if (curl_errno($ch)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => curl_error($ch),
+                ]);
+            }
+
+            $responseData = json_decode($response, true);
+
+            if (!isset($responseData['response'])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Session ID not found in response',
+                ]);
+            }
+
+            //      $sessionId = $responseData['session_id'];
+            //    sleep(5); 
+            //    $nextUrl = 'http://34.131.125.195:8000/get_audio/'.urlencode($request->user_chat_id);
+
+            //     $ch = curl_init();
+            //     curl_setopt_array($ch, [
+            //         CURLOPT_URL => $nextUrl,
+            //         CURLOPT_RETURNTRANSFER => true,
+            //         CURLOPT_HTTPHEADER => [
+            //             'Accept: application/json',
+            //         ],
+            //     ]);
+
+            //     $nextResponse = curl_exec($ch);
+            //     curl_close($ch);
+
+            //     $responseData2 = json_decode($nextResponse, true);
+
+            //$responseData2 = json_decode($nextResponse, true);
+            return response()->json([
+                'status' => true,
+                'message' => 'Audio',
+                'data' => $responseData['response']
+            ]);
+        }
+    }
+    public function mock_interview_test_report(Request $request)
+    {
+        $auth = JWTAuth::user();
+
+        if (!$auth) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Unauthorized',
+            ], 401);
+        }
+        $validator = Validator::make($request->all(), [
+
+
+            'user_chat_id' => 'required'
+        ], [
+
+
+            'user_chat_id.required' => 'user_chat_id'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => $validator->errors(),
+
+            ], 422);
+        }
+
+
+        $job_details = array(
+            "user_id" => $request->user_chat_id,
+        );
+
+
+        $postData = http_build_query($job_details);
+
+        $ch = curl_init();
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/x-www-form-urlencoded', // 🧠 CRUCIAL HEADER
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        if (curl_errno($ch)) {
+            return response()->json([
+                'status' => false,
+                'message' => curl_error($ch),
+            ]);
+        }
+
+        $responseData = json_decode($response, true);
+        if (isset($responseData['report'])) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Report fetched successfully.',
+                'data' => $responseData['report']
+            ]);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'Report not available.',
+                'data' => null
+            ]);
+        }
     }
     public function clear_mock_interview_test(Request $request)
     {
-         $auth = JWTAuth::user();
-       
+        $auth = JWTAuth::user();
+
         if (!$auth) {
             return response()->json([
                 'status' => false,
@@ -775,13 +769,13 @@ class AppliedJobController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-           
-           
-            'user_chat_id'=>'required'
+
+
+            'user_chat_id' => 'required'
         ], [
-            
-           
-            'user_chat_id.required'=>'user_chat_id'
+
+
+            'user_chat_id.required' => 'user_chat_id'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -790,45 +784,45 @@ class AppliedJobController extends Controller
 
             ], 422);
         }
-        
-        
-                  $job_details=array("user_id"=>$request->user_chat_id,
-             
-               
-               );
-          
-         
-           $postData = http_build_query($job_details);
-                
-                $ch = curl_init();
-                
-                curl_setopt_array($ch, [
-                    CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST => true,
-                    CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
-                    CURLOPT_HTTPHEADER => [
-                        'Accept: application/json',
-                        'Content-Type: application/json', // 🧠 CRUCIAL HEADER
-                    ],
-                ]);
-                
-                $response = curl_exec($ch);
-              curl_close($ch);
-            
-            if (curl_errno($ch)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => curl_error($ch),
-                ]);
-            }
-            
-           
-                return response()->json([
-                    'status' => true,
-                    'message' => 'Chat Cleared.',
-                
-                ]);
-        
+
+
+        $job_details = array(
+            "user_id" => $request->user_chat_id,
+
+
+        );
+
+
+        $postData = http_build_query($job_details);
+
+        $ch = curl_init();
+
+        curl_setopt_array($ch, [
+            CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/json', // 🧠 CRUCIAL HEADER
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        if (curl_errno($ch)) {
+            return response()->json([
+                'status' => false,
+                'message' => curl_error($ch),
+            ]);
+        }
+
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Chat Cleared.',
+
+        ]);
     }
 }

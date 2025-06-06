@@ -22,6 +22,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\FileHelper;
 
 class HomeController extends Controller
 {
@@ -40,13 +41,8 @@ class HomeController extends Controller
 
                 // Modify the company logo to include the full URL if it exists
                 if ($company->company_logo) {
-                    if ($disk === 's3') {
-                        // For S3, use Storage facade with the 's3' disk
-                        $company->company_logo = Storage::disk('s3')->url($company->company_logo);
-                    } else {
-                        // Default to local
-                        $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
-                    }
+                    $company->company_logo =FileHelper::getFileUrl( $company->company_logo);
+                
                 } else {
                     // If no logo exists, set it to null or a default image URL
                     $company->company_logo = null; // Replace with a default image URL if needed
@@ -92,13 +88,8 @@ class HomeController extends Controller
         if ($company) {
             // Modify the company logo to include the full URL if it exists
             if ($company->company_logo) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $company->company_logo = Storage::disk('s3')->url($company->company_logo);
-                } else {
-                    // Default to local
-                    $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
-                }
+               $company->company_logo =FileHelper::getFileUrl( $company->company_logo);
+                
             } else {
                 $company->company_logo = null; // Or use a default image URL
             }
@@ -119,11 +110,8 @@ class HomeController extends Controller
                     $imageUrls = [];
             
                     foreach ($images as $image) {
-                        if ($disk === 's3') {
-                            $imageUrls[] = Storage::disk('s3')->url($image);
-                        } else {
-                            $imageUrls[] = env('APP_URL') . Storage::url('app/public/' .$image);
-                        }
+                           $imageUrls[] =FileHelper::getFileUrl( $image);
+                
                     }
             
                     $company_event->event_images = $imageUrls; // Assign the array of full URLs
@@ -263,13 +251,8 @@ class HomeController extends Controller
              $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
  
             if ($job->company_logo) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $job->company_logo = Storage::disk('s3')->url($job->company_logo);
-                } else {
-                    // Default to local
-                    $job->company_logo = env('APP_URL') . Storage::url('app/public/' . $job->company_logo);
-                }
+                $job->company_logo =FileHelper::getFileUrl( $job->company_logo);
+            
              
             }
               $job->job_locations = json_decode($job->job_locations, true);
@@ -305,14 +288,8 @@ class HomeController extends Controller
              $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
  
             if ($company->company_logo) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $company->company_logo = Storage::disk('s3')->url($company->company_logo);
-                } else {
-                    // Default to local
-                    $company->company_logo = env('APP_URL') . Storage::url('app/public/' . $company->company_logo);
-                }
-             
+              $company->company_logo =FileHelper::getFileUrl( $company->company_logo);
+            
             }
               $company->company_locations = json_decode($company->company_locations, true);
                $company->industry = json_decode($company->industry, true);
@@ -340,14 +317,8 @@ class HomeController extends Controller
              $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
  
             if ($review->profile_picture) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $review->profile_picture = Storage::disk('s3')->url($review->profile_picture);
-                } else {
-                    // Default to local
-                    $review->profile_picture = env('APP_URL') . Storage::url('app/public/' . $review->profile_picture);
-                }
-             
+                 $review->profile_picture =FileHelper::getFileUrl($review->profile_picture);
+            
             }
              
             return $review;

@@ -24,7 +24,8 @@ use App\Models\InterviewRound;
 
 use App\Models\SkillAssQuestion;
 use Illuminate\Support\Facades\Cache;
- use Twilio\Rest\Client;
+use Twilio\Rest\Client;
+use App\Helpers\FileHelper;
 
 
 use Illuminate\Support\Facades\Hash;
@@ -213,18 +214,16 @@ class InterviewController extends Controller
                 }
                 $candidate->open_to_work = $candidate->open_to_work == 1;
 
-                // Resume
+                  // Resume
                 if ($candidate->resume) {
-                    $candidate->resume = $disk === 's3'
-                        ? Storage::disk('s3')->url($candidate->resume)
-                        : env('APP_URL') . Storage::url('app/public/' . $candidate->resume);
+                     $candidate->resume =FileHelper::getFileUrl($candidate->resume);
+                    
                 }
 
                 // Profile Picture
                 if ($candidate->profile_picture) {
-                    $candidate->profile_picture = $disk === 's3'
-                        ? Storage::disk('s3')->url($candidate->profile_picture)
-                        : env('APP_URL') . Storage::url('app/public/' . $candidate->profile_picture);
+                      $candidate->profile_picture =FileHelper::getFileUrl($candidate->profile_picture);
+                   
                 }
 
                 // Skill Test

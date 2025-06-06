@@ -16,13 +16,10 @@ use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Jobs;
 use Illuminate\Support\Facades\Cache;
-
-
 use Illuminate\Support\Facades\Storage;
-
 use Illuminate\Support\Facades\Log;
-
 use Illuminate\Support\Facades\Validator;
+use App\Helpers\FileHelper;
 
 class JobSeekerProfileController extends Controller
 {
@@ -42,7 +39,7 @@ class JobSeekerProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'profilePicture' => 'required',
             'firstName' => 'required',
-            
+
             'lastName' => 'required',
             'dateOfBirth' => 'required',
             'gender' => 'required',
@@ -58,14 +55,14 @@ class JobSeekerProfileController extends Controller
             'disability' => 'required',
             'knownLanguages' => 'required|array', // Ensure it's an array
             'knownLanguages.*' => 'string',
-         
- 'work_status' => 'required',
+
+            'work_status' => 'required',
             'totalExpYear' => 'required',
             'totalExpMonth' => 'required',
         ], [
             'profilePicture.required' => 'profilePicture is required.',
             'firstName.required' => 'firstName is required.',
-         
+
             'lastName.required' => 'lastName is required.',
             'dateOfBirth.required' => 'dateOfBirth is required.',
             'gender.required' => 'gender is required.',
@@ -80,8 +77,8 @@ class JobSeekerProfileController extends Controller
             'bloodGroup.required' => 'bloodGroup is required.',
             'disability.required' => 'disability is required.',
             'knownLanguages.required' => 'knownLanguages is required.',
-         
-'work_status.required'=>'work status required',
+
+            'work_status.required' => 'work status required',
             'totalExpYear.required' => 'total year Exp is required',
             'totalExpMonth.required' => 'total month Exp is required',
         ]);
@@ -101,36 +98,19 @@ class JobSeekerProfileController extends Controller
             if ($personal->profile_picture) {
                 // Get the file path to delete
                 $existingFilePath = $personal->profile_picture;
-
-                // Determine which disk to use and delete the file accordingly
-                if ($disk == 'local') {
-                    // Delete from local disk
-                    Storage::disk('public')->delete($existingFilePath);
-                } elseif ($disk == 's3') {
-                    // Delete from S3 disk
-                    Storage::disk('s3')->delete($existingFilePath);
-                }
+                FileHelper::deleteFile($existingFilePath);
             }
 
             $extension = $request->file('profilePicture')->getClientOriginalExtension();
 
             // Create a unique filename using time and the original extension
             $filename = time() . '.' . $extension;
-
-            // Check which disk is selected and store the file accordingly
-            if ($disk == 'local') {
-
-                // Store the file on the local disk under the 'jobseeker_profile_picture' folder
-                $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 'public');
-            } elseif ($disk == 's3') {
-
-                // Store the file on the S3 disk under the 'jobseeker_profile_picture' folder
-                $imagePath = $request->file('profilePicture')->storeAs('jobseeker_profile_picture', $filename, 's3');
-            }
+            $imagePath = FileHelper::storeFile($request, 'jobseeker_profile_picture', 'jobseeker_profile_picture');
 
             // Save the file path to the profile_picture column in the model
             $personal->profile_picture = $imagePath;
         }
+
 
         $personal->first_name = $request->firstName;
         $personal->middle_name = $request->middleName;
@@ -160,7 +140,7 @@ class JobSeekerProfileController extends Controller
             $contact->zipcode = $request->zipCode;
             $contact->course = $request->course;
             $contact->primary_specialization = $request->specialization;
-$contact->work_status = $request->work_status;
+            $contact->work_status = $request->work_status;
             $contact->total_year_exp = $request->totalExpYear;
             $contact->total_month_exp = $request->totalExpMonth;
 
@@ -196,41 +176,33 @@ $contact->work_status = $request->work_status;
             ], 401);
         }
 
-        $personal_data = User::select('users.*','job_seeker_contact_details.work_status','job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
+        $personal_data = User::select('users.*', 'job_seeker_contact_details.work_status', 'job_seeker_contact_details.total_year_exp', 'job_seeker_contact_details.total_month_exp', 'job_seeker_contact_details.country', 'job_seeker_contact_details.state', 'job_seeker_contact_details.city', 'job_seeker_contact_details.zipcode', 'job_seeker_contact_details.course', 'job_seeker_contact_details.primary_specialization', 'job_seeker_contact_details.dream_company')
             ->join('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
             ->where('users.id', $auth->id)
 
             ->first();
-       $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-           if($personal_data)
-           {
+        if ($personal_data) {
             if ($personal_data->profile_picture) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $personal_data->profile_picture = Storage::disk('s3')->url($personal_data->profile_picture);
-                } else {
-                    // Default to local
-                    $personal_data->profile_picture = env('APP_URL') . Storage::url('app/public/' .$personal_data->profile_picture);
-                }
-              
+                $personal_data->profile_picture = FileHelper::getFileUrl($personal_data->profile_picture);
             } else {
                 // If no logo exists, set it to null or a default image URL
                 $personal_data->profile_picture = null; // Replace with a default image URL if needed
             }
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Get Personal Information.',
-            'data' => $personal_data
-        ]);
-           }else{
-               return response()->json([
-            'status' => true,
-            'message' => 'Get Personal Information.',
-            'data' => []
-        ]);
-           }
+            return response()->json([
+                'status' => true,
+                'message' => 'Get Personal Information.',
+                'data' => $personal_data
+            ]);
+        } else {
+            return response()->json([
+                'status' => true,
+                'message' => 'Get Personal Information.',
+                'data' => []
+            ]);
+        }
     }
 
     public function contact_details(Request $request)
@@ -247,12 +219,12 @@ $contact->work_status = $request->work_status;
         $validator = Validator::make($request->all(), [
             'secondaryPhone' => 'required',
             'otherEmail' => 'required',
-           
+
 
         ], [
             'secondaryPhone.required' => 'Secondary mobile Number is required.',
             'otherEmail.required' => 'Other Email is required.',
-           
+
 
         ]);
         if ($validator->fails()) {
@@ -315,60 +287,59 @@ $contact->work_status = $request->work_status;
             if (!$auth) {
                 return response()->json(['status' => false, 'message' => 'Unauthorized'], 401);
             }
-        
+
             // ✅ Validate input
             $validator = Validator::make($request->all(), [
                 'documents' => 'required'
             ]);
-        
+
             if ($validator->fails()) {
                 return response()->json(['status' => false, 'message' => $validator->errors()], 422);
             }
-        
+
             $input = $request->documents;
-        
+
             // ✅ Normalize to array
             if (!is_array($input) || !array_is_list($input)) {
                 $input = [$input];
             }
-        
+
             $newDocuments = [];
-        
+
             foreach ($input as $index => $doc) {
                 $filePath = null;
-        
+
                 // ✅ Check if this document has a file uploaded (documents.0.file, documents.1.file, etc.)
                 if ($request->hasFile("documents.file")) {
                     $file = $request->file("documents.file");
-                    $filename = time() . '_' . $file->getClientOriginalName();
-                    $filePath = $file->storeAs('jobseeker_documents', $filename, 'public');
+                    $filePath = FileHelper::storeFile($request, $file, 'jobseeker_documents');
                 }
-        
+
                 $newDocuments[] = [
                     "doc_id" => null,
                     "type"    => $doc['type'] ?? 'Unknown',
                     "file"    => $filePath ?? $doc['file'] ?? null, // fallback if no new upload
                 ];
             }
-        
+
             // ✅ Get existing documents
             $userDocument = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
             $existingDocuments = $userDocument ? json_decode($userDocument->documents, true) : [];
-        
+
             if (!is_array($existingDocuments)) {
                 $existingDocuments = [];
             }
-        
+
             // ✅ Assign next docu_ids
             $lastId = collect($existingDocuments)->pluck('doc_id')->max() ?? 0;
-        
+
             foreach ($newDocuments as &$doc) {
                 $lastId++;
                 $doc['doc_id'] = $lastId;
             }
-        
+
             $finalData = array_merge($existingDocuments, $newDocuments);
-        
+
             // ✅ Save or update
             if ($userDocument) {
                 $userDocument->documents = json_encode($finalData, JSON_PRETTY_PRINT);
@@ -380,12 +351,11 @@ $contact->work_status = $request->work_status;
                     'documents' => json_encode($finalData, JSON_PRETTY_PRINT),
                 ]);
             }
-        
+
             return response()->json([
                 'status' => true,
                 'message' => 'Documents added successfully!',
             ], 200);
-        
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
@@ -412,7 +382,7 @@ $contact->work_status = $request->work_status;
             $doc_id = (int) $request->doc_id; // Ensure it's an integer
 
             // Fetch user's education records
-            $userDocument= JobSeekerEducationDetails::select('documents', 'user_id', 'id')
+            $userDocument = JobSeekerEducationDetails::select('documents', 'user_id', 'id')
                 ->where('user_id', $auth->id)
                 ->first();
 
@@ -457,7 +427,6 @@ $contact->work_status = $request->work_status;
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
-        
     }
 
     public function get_document()
@@ -469,31 +438,30 @@ $contact->work_status = $request->work_status;
 
         $userDocument = JobSeekerEducationDetails::where('user_id', $auth->id)->first();
 
-    if (!$userDocument || !$userDocument->documents) {
-        return response()->json([
-            'status' => true,
-            'message' => 'No documents found',
-            'data' => []
-        ], 200);
-    }
+        if (!$userDocument || !$userDocument->documents) {
+            return response()->json([
+                'status' => true,
+                'message' => 'No documents found',
+                'data' => []
+            ], 200);
+        }
 
-    // Decode documents JSON
-    $documents = json_decode($userDocument->documents, true);
+        // Decode documents JSON
+        $documents = json_decode($userDocument->documents, true);
 
-    // Append full file path
-    foreach ($documents as &$doc) {
-        if (!empty($doc['file'])) {
-           
-            $doc['file'] = env('APP_URL') . Storage::url('app/public/' .$doc['file']);
-    }
-    }
+        // Append full file path
+        foreach ($documents as &$doc) {
+            if (!empty($doc['file'])) {
+
+                $doc['file'] = FileHelper::getFileUrl($doc['file']);
+            }
+        }
         return response()->json([
             'status' => true,
             'message' => 'Document List',
             'data' => $documents
         ], 200);
-    
-}
+    }
 
     public function add_professional_exp(Request $request)
     {
@@ -1667,7 +1635,7 @@ $contact->work_status = $request->work_status;
                 "marksType" => $certification['marksType'] ? $certification['marksType'] : ' ',
                 "aggregate" => $certification['aggregate'] ? $certification['aggregate'] : '0',
                 "max" => $certification['max'] ? $certification['max'] : '0',
-                "certificateLink"=>$certification['certificateLink']?$certification['certificateLink']:'',
+                "certificateLink" => $certification['certificateLink'] ? $certification['certificateLink'] : '',
 
                 "skills" => $certification['skills'] ? $certification['skills'] : ' ',
                 "description" => $certification['description'] ? $certification['description'] : ' ',
@@ -2143,7 +2111,7 @@ $contact->work_status = $request->work_status;
             ], 422);
         }
 
-           $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
+        $other_details = JobSeekerProfessionalDetails::where('user_id', '=', $auth->id)->first();
         if ($other_details) {
             $other_details->summary = $request->summary;
             $other_details->skills = $request->skills;
@@ -2156,7 +2124,7 @@ $contact->work_status = $request->work_status;
             $other_details = new JobSeekerProfessionalDetails();
             $other_details->user_id = $auth->id;
             $other_details->bash_id = Str::uuid();
-          $other_details->summary = $request->summary;
+            $other_details->summary = $request->summary;
             $other_details->skills = $request->skills;
             $other_details->achievement = $request->achievement;
             $other_details->extra_curricular = $request->extra_curricular;
@@ -2207,7 +2175,7 @@ $contact->work_status = $request->work_status;
             'job_seeker_contact_details.course',
             'job_seeker_contact_details.primary_specialization',
             'job_seeker_contact_details.dream_company',
-              'job_seeker_contact_details.work_status',
+            'job_seeker_contact_details.work_status',
             'job_seeker_contact_details.total_year_exp',
             'job_seeker_contact_details.total_month_exp',
             'job_seeker_contact_details.secondary_mobile',
@@ -2227,10 +2195,10 @@ $contact->work_status = $request->work_status;
             'jobseeker_professional_details.projects',
             'jobseeker_professional_details.internship'
         )
-        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
-        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
-      
+            ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+            ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+            ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+
             ->where('users.id', $auth->id)
 
             ->first();
@@ -2257,13 +2225,13 @@ $contact->work_status = $request->work_status;
                 'medicalHistory' => $personal_data->medical_history,
                 'disability' => $personal_data->disability,
                 'knownLanguages' => $knownLanguages, // Assuming it's stored as comma separated values
-                  'work_status' => $personal_data->work_status,
+                'work_status' => $personal_data->work_status,
                 'totalExpYear' => $personal_data->total_year_exp,
                 'totalExpMonth' => $personal_data->total_month_exp,
             ],
-           
+
             'projectDetails' => json_decode($personal_data->projects),
-          
+
             'otherDetails' => [
                 'summary' => $personal_data->summary,
                 'skills' => json_decode($personal_data->skills),
@@ -2272,7 +2240,7 @@ $contact->work_status = $request->work_status;
                 'soft_skills' => $personal_data->soft_skills
             ],
             'educationDetails' => json_decode($personal_data->educations),
-           
+
         ];
         $errors = [];
 
@@ -2288,7 +2256,7 @@ $contact->work_status = $request->work_status;
         if (empty($responseData['otherDetails'])) {
             $errors[] = 'Other Details required';
         }
-    
+
         // If there are errors, return response with status false
         if (!empty($errors)) {
             return response()->json([
@@ -2301,9 +2269,8 @@ $contact->work_status = $request->work_status;
             'message' => 'Get Other Information.',
             'data' => $responseData
         ]);
-    
     }
-     public function generate_resume_by_jd(Request $request)
+    public function generate_resume_by_jd(Request $request)
     {
         $auth = JWTAuth::user();
 
@@ -2331,11 +2298,11 @@ $contact->work_status = $request->work_status;
 
             ], 422);
         }
-         $personal_data = User::select(
+        $personal_data = User::select(
             'users.*',
-          
+
             'jobseeker_education_details.certifications',
-           
+
             'jobseeker_professional_details.experience',
             'jobseeker_professional_details.summary',
             'jobseeker_professional_details.soft_skills',
@@ -2345,103 +2312,102 @@ $contact->work_status = $request->work_status;
             'jobseeker_professional_details.projects',
             'jobseeker_professional_details.internship'
         )
-        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
-        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
-      
+            ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+            ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+            ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+
             ->where('users.id', $auth->id)
 
             ->first();
-        if($personal_data)
-        {
-            
-        $responseData = [
-           
-            'certificationDetails' => json_decode($personal_data->certifications),
-           
-            'professionalDetails' => json_decode($personal_data->experience),
-            'projectDetails' => json_decode($personal_data->projects),
-           
-            'otherDetails' => [
-                'summary' => $personal_data->summary,
-                'skills' => json_decode($personal_data->skills),
-                'achievement' => json_decode($personal_data->achievement),
-                'extra_curricular' => json_decode($personal_data->extra_curricular),
-                'soft_skills' => json_decode($personal_data->soft_skills)
-            ],
-         
-        ];
-        
-         $job = Jobs::select('jobs.job_title','jobs.location','jobs.job_description','jobs.responsibilities','jobs.skills_required','jobs.status','jobs.salary_range','jobs.industry','jobs.job_type','jobs.contact_email','jobs.experience_required','jobs.is_hot_job','jobs.expiration_date','jobs.expiration_time')
-        ->where('jobs.id', $request->job_id)
-       
-        ->first();
-       
-       $jd=array("title"=>$job->job_title,
-     
-       "locations"=>$job->location,
-       "description"=>$job->job_description,
-       "responsibilities"=>$job->responsibilities,
-       "skills"=>$job->skills_required,
-       "status"=>$job->status,
-       "salary"=>$job->salary_range,
-       "industries"=>$job->industry,
-       "employmentType"=>$job->job_type,
-       "email"=>$job->contact_email,
-       "experience"=>$job->	experience_required,
-       "hotJob"=>$job->is_hot_job,
-       "expirationDate"=>$job->expiration_date,
-       
-       "expirationTime"=>$job->expiration_time
-       );
-       
-       
-         $ch = curl_init();
-            
-       
-        
-        $jsonData = [
-            'jd' => $jd,
-            'resume' => $responseData
-        ];
+        if ($personal_data) {
 
-       
+            $responseData = [
+
+                'certificationDetails' => json_decode($personal_data->certifications),
+
+                'professionalDetails' => json_decode($personal_data->experience),
+                'projectDetails' => json_decode($personal_data->projects),
+
+                'otherDetails' => [
+                    'summary' => $personal_data->summary,
+                    'skills' => json_decode($personal_data->skills),
+                    'achievement' => json_decode($personal_data->achievement),
+                    'extra_curricular' => json_decode($personal_data->extra_curricular),
+                    'soft_skills' => json_decode($personal_data->soft_skills)
+                ],
+
+            ];
+
+            $job = Jobs::select('jobs.job_title', 'jobs.location', 'jobs.job_description', 'jobs.responsibilities', 'jobs.skills_required', 'jobs.status', 'jobs.salary_range', 'jobs.industry', 'jobs.job_type', 'jobs.contact_email', 'jobs.experience_required', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time')
+                ->where('jobs.id', $request->job_id)
+
+                ->first();
+
+            $jd = array(
+                "title" => $job->job_title,
+
+                "locations" => $job->location,
+                "description" => $job->job_description,
+                "responsibilities" => $job->responsibilities,
+                "skills" => $job->skills_required,
+                "status" => $job->status,
+                "salary" => $job->salary_range,
+                "industries" => $job->industry,
+                "employmentType" => $job->job_type,
+                "email" => $job->contact_email,
+                "experience" => $job->experience_required,
+                "hotJob" => $job->is_hot_job,
+                "expirationDate" => $job->expiration_date,
+
+                "expirationTime" => $job->expiration_time
+            );
+
+
+            $ch = curl_init();
+
+
+
+            $jsonData = [
+                'jd' => $jd,
+                'resume' => $responseData
+            ];
+
+
             curl_setopt_array($ch, [
                 CURLOPT_URL => 'https://job-fso4.onrender.com/RESUME_GENERATOR',
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => json_encode($jsonData), 
+                CURLOPT_POSTFIELDS => json_encode($jsonData),
                 CURLOPT_HTTPHEADER => [
                     'Accept: application/json',
                     'Content-Type: application/json', // This is CRITICAL
                 ],
             ]);
-            
+
             $response = curl_exec($ch);
-            
-           
-       
+
+
+
             if (curl_errno($ch)) {
-                 return response()->json([
-                'status' => false,
-                'message' =>curl_error($ch),
-                
-            ]);
-              
+                return response()->json([
+                    'status' => false,
+                    'message' => curl_error($ch),
+
+                ]);
             }
-            
-             curl_close($ch);
-              return response()->json([
-            'status' => true,
-            'message' => 'Generate Resume By Jd.',
-            'data' =>json_decode($response)
-        ]);
-        }else{
-              return response()->json([
-            'status' => false,
-            'message' => 'No data found.',
-            'data' => []
-        ]);
+
+            curl_close($ch);
+            return response()->json([
+                'status' => true,
+                'message' => 'Generate Resume By Jd.',
+                'data' => json_decode($response)
+            ]);
+        } else {
+            return response()->json([
+                'status' => false,
+                'message' => 'No data found.',
+                'data' => []
+            ]);
         }
     }
     public function master_resume_json()
@@ -2464,7 +2430,7 @@ $contact->work_status = $request->work_status;
             'job_seeker_contact_details.course',
             'job_seeker_contact_details.primary_specialization',
             'job_seeker_contact_details.dream_company',
-              'job_seeker_contact_details.work_status',
+            'job_seeker_contact_details.work_status',
             'job_seeker_contact_details.total_year_exp',
             'job_seeker_contact_details.total_month_exp',
             'job_seeker_contact_details.secondary_mobile',
@@ -2484,32 +2450,24 @@ $contact->work_status = $request->work_status;
             'jobseeker_professional_details.projects',
             'jobseeker_professional_details.internship'
         )
-        ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
-        ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
-        ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
-      
+            ->leftJoin('job_seeker_contact_details', 'users.id', '=', 'job_seeker_contact_details.user_id')
+            ->leftJoin('jobseeker_education_details', 'users.id', '=', 'jobseeker_education_details.user_id')
+            ->leftJoin('jobseeker_professional_details', 'users.id', '=', 'jobseeker_professional_details.user_id')
+
             ->where('users.id', $auth->id)
 
             ->first();
         $knownLanguages = json_decode($personal_data->language_known, true);
-        if($personal_data->open_to_work=="0")
-        {
-            $open_to_work=false;
-        }else{
-               $open_to_work=true;
+        if ($personal_data->open_to_work == "0") {
+            $open_to_work = false;
+        } else {
+            $open_to_work = true;
         }
-       $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+        $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-           
+
         if ($personal_data->profile_picture) {
-            if ($disk=== 's3') {
-                // For S3, use Storage facade with the 's3' disk
-                $profile_picture = Storage::disk('s3')->url($personal_data->profile_picture);
-            } else {
-                // Default to local
-                $profile_picture = env('APP_URL') . Storage::url('app/public/' .$personal_data->profile_picture);
-            }
-          
+            $profile_picture = FileHelper::getFileUrl($personal_data->profile_picture);
         } else {
             // If no logo exists, set it to null or a default image URL
             $profile_picture = null; // Replace with a default image URL if needed
@@ -2540,7 +2498,7 @@ $contact->work_status = $request->work_status;
                 'work_status' => $personal_data->work_status,
                 'totalExpYear' => $personal_data->total_year_exp,
                 'totalExpMonth' => $personal_data->total_month_exp,
-                'open_to_work'=>$open_to_work,
+                'open_to_work' => $open_to_work,
             ],
             'certificationDetails' => json_decode($personal_data->certifications),
             'contactDetails' => [
@@ -2585,14 +2543,14 @@ $contact->work_status = $request->work_status;
             'resume_name' => 'required',
             'resume' => 'required',
             'resume_json' => 'required',
-            'is_ai_generated'=>'required',
-            'job_id'=>'required',
+            'is_ai_generated' => 'required',
+            'job_id' => 'required',
 
         ], [
             'resume_name.required' => 'Resume Name is required.',
             'resume.required' => 'Resume is required.',
             'resume_json.required' => 'Resume JSON is required.',
-            'job_id.required'=>'Job Id is required'
+            'job_id.required' => 'Job Id is required'
 
         ]);
         if ($validator->fails()) {
@@ -2610,14 +2568,9 @@ $contact->work_status = $request->work_status;
             $extension = $request->file('resume')->getClientOriginalExtension();
 
             $filename = time() . '.' . $extension;
+            $imagePath = FileHelper::storeFile($request,  $filename, 'jobseeker_resume');
 
-            if ($disk == 'local') {
 
-                $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 'public');
-            } elseif ($disk == 's3') {
-
-                $imagePath = $request->file('resume')->storeAs('jobseeker_resume', $filename, 's3');
-            }
 
             $resume->resume = $imagePath;
         }
@@ -2626,8 +2579,8 @@ $contact->work_status = $request->work_status;
         $resume->bash_id = Str::uuid();
         $resume->resume_name = $request->resume_name;
         $resume->resume_json = $request->resume_json;
-         $resume->job_id = $request->job_id;
-          $resume->is_ai_generated = $request->is_ai_generated;
+        $resume->job_id = $request->job_id;
+        $resume->is_ai_generated = $request->is_ai_generated;
         $resume->save();
         return response()->json(['status' => true, 'message' => 'Resume Generated.'], 200);
     }
@@ -2642,20 +2595,13 @@ $contact->work_status = $request->work_status;
                 'message' => 'Unauthorized',
             ], 401);
         }
-        $resume = GenerateResume::select('id','bash_id', 'resume_name', 'resume', 'resume_json','is_ai_generated')->where('user_id', $auth->id)->get();
+        $resume = GenerateResume::select('id', 'bash_id', 'resume_name', 'resume', 'resume_json', 'is_ai_generated')->where('user_id', $auth->id)->get();
         $resume->transform(function ($resume) {
-             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
+            $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-           
+
             if ($resume->resume) {
-                if ($disk=== 's3') {
-                    // For S3, use Storage facade with the 's3' disk
-                    $resume->resume = Storage::disk('s3')->url($resume->resume);
-                } else {
-                    // Default to local
-                    $resume->resume= env('APP_URL') . Storage::url('app/public/' .$resume->resume);
-                }
-              
+                $resume->resume = FileHelper::getFileUrl($resume->resume);
             } else {
                 // If no logo exists, set it to null or a default image URL
                 $resume->resume = null; // Replace with a default image URL if needed
@@ -2674,7 +2620,7 @@ $contact->work_status = $request->work_status;
     }
     public function get_resume_by_id(Request $request)
     {
-         $auth = JWTAuth::user();
+        $auth = JWTAuth::user();
 
         if (!$auth) {
             return response()->json([
@@ -2685,12 +2631,12 @@ $contact->work_status = $request->work_status;
 
         $validator = Validator::make($request->all(), [
             'id' => 'required',
-           'bash_id'=>'required',
+            'bash_id' => 'required',
 
         ], [
             'id.required' => 'Id is required.',
-            'bash_id.required'=>'Bash_id is required'
-          
+            'bash_id.required' => 'Bash_id is required'
+
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -2699,11 +2645,11 @@ $contact->work_status = $request->work_status;
 
             ], 422);
         }
-         $resume = GenerateResume::select('id','bash_id', 'resume_name', 'resume_json')->where('user_id', $auth->id)->where('id',$request->id)->where('bash_id',$request->bash_id)->first();
-          if ($resume->resume_json) {
-                $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
-            }
-            return response()->json([
+        $resume = GenerateResume::select('id', 'bash_id', 'resume_name', 'resume_json')->where('user_id', $auth->id)->where('id', $request->id)->where('bash_id', $request->bash_id)->first();
+        if ($resume->resume_json) {
+            $resume->resume_json = json_decode($resume->resume_json, true); // Decodes to an associative array
+        }
+        return response()->json([
             'status' => true,
             'message' => 'View Resume.',
             'data' => $resume
@@ -2722,11 +2668,11 @@ $contact->work_status = $request->work_status;
 
         $validator = Validator::make($request->all(), [
             'id' => 'required',
-           
+
 
         ], [
             'id.required' => 'Id is required.',
-          
+
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -2736,53 +2682,42 @@ $contact->work_status = $request->work_status;
             ], 422);
         }
         $delete = GenerateResume::where('id', $request->id)
-     
-        ->where('user_id', $auth->id)
-        ->first();
+
+            ->where('user_id', $auth->id)
+            ->first();
         $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-    // Check if the document exists
-    if (!$delete) {
-        return response()->json([
-            'status' => false,
-            'message' => 'not found'
-        ], 404);
-    }
-   
-    // Get the document image path (assuming the column stores the relative path)
-    $imagePath = 'public/' . $delete->resume;
-
-    // Check if the image exists in storage and delete it
-    if (Storage::exists($imagePath)) {
-        if($delete)
-        {
-            
-      
-             $ai_delete = AIAnalysisResume::where('resume_generate_id', $request->id)
-         
-            ->where('jobseeker_id', $auth->id)
-            ->delete();
-    //         if($ai_delete)
-    //   {
-    //           $ai_delete->delete();
-    //   }
+        // Check if the document exists
+        if (!$delete) {
+            return response()->json([
+                'status' => false,
+                'message' => 'not found'
+            ], 404);
         }
-        // if ($disk == 'local') {
-        //     // Delete from local disk
-        //     Storage::disk('public')->delete($imagePath);
-        // } elseif ($disk == 's3') {
-        //     // Delete from S3 disk
-        //     Storage::disk('s3')->delete( $imagePath);
-        // }
+
+        // Get the document image path (assuming the column stores the relative path)
+        // Check if the image exists in storage and delete it
+
+        if ($delete) {
+
+
+            $ai_delete = AIAnalysisResume::where('resume_generate_id', $request->id)
+
+                ->where('jobseeker_id', $auth->id)
+                ->delete();
+            FileHelper::deleteFile($delete->resume);
+        }
+
+
+
+        // Delete the document record from the database
+        $delete->delete();
+        return response()->json([
+            'status' => true,
+            'message' => 'resume deleted.'
+        ]);
     }
 
-    // Delete the document record from the database
-    $delete->delete();
-        return response()->json([
-           'status'=>true,
-           'message'=>'resume deleted.'
-       ]);
-    }
 
     public function open_to_work(Request $request)
     {
@@ -2796,9 +2731,9 @@ $contact->work_status = $request->work_status;
         }
 
         $validator = Validator::make($request->all(), [
-            'open_to_work' => 'required', 
+            'open_to_work' => 'required',
         ], [
-            'open_to_work.required' => 'Open to Work status is required.',  
+            'open_to_work.required' => 'Open to Work status is required.',
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -2809,30 +2744,26 @@ $contact->work_status = $request->work_status;
         }
 
         $user = User::where('id', $auth->id)->first();
-        if($user)
-        {
-            if( $request->open_to_work==true)
-            {
-                $open_to_work=1;
-                
-            }else{
-                 $open_to_work=0;
+        if ($user) {
+            if ($request->open_to_work == true) {
+                $open_to_work = 1;
+            } else {
+                $open_to_work = 0;
             }
             $user->open_to_work = $open_to_work;
             $user->save();
             return response()->json([
                 "status" => true,
                 "message" => "Open to Work status Changed.",
-                
+
             ], 200);
-        }else{
+        } else {
             return response()->json([
                 "status" => false,
                 "message" => "User not found.",
-                
+
             ]);
         }
-
     }
 
     public function get_open_to_work()
@@ -2846,18 +2777,16 @@ $contact->work_status = $request->work_status;
             ], 401);
         }
         $user = User::select('open_to_work')->where('id', $auth->id)->first();
-        if($user->open_to_work==1)
-            {
-                $open_to_work=true;
-                
-            }else{
-                $open_to_work=false;
-            }
+        if ($user->open_to_work == 1) {
+            $open_to_work = true;
+        } else {
+            $open_to_work = false;
+        }
         return response()->json([
             "status" => true,
             "message" => "Open to Work Status.",
-            'data'=>$open_to_work
-            
+            'data' => $open_to_work
+
         ]);
     }
 
@@ -2874,10 +2803,10 @@ $contact->work_status = $request->work_status;
 
         $validator = Validator::make($request->all(), [
             'review' => 'required',
-            'rating'=>'required'
+            'rating' => 'required'
         ], [
-            'review.required' => 'Review is required.', 
-            'rating.required'=>'Rating is required'
+            'review.required' => 'Review is required.',
+            'rating.required' => 'Rating is required'
         ]);
         if ($validator->fails()) {
             return response()->json([
@@ -2887,17 +2816,17 @@ $contact->work_status = $request->work_status;
             ], 422);
         }
 
-        $review=new CandidateReview();
-        $review->bash_id=Str::uuid();
-        $review->jobseeker_id=$auth->id;
-        $review->review=$request->review;
-        $review->rating=$request->rating;
-        $review->status='Pending';
+        $review = new CandidateReview();
+        $review->bash_id = Str::uuid();
+        $review->jobseeker_id = $auth->id;
+        $review->review = $request->review;
+        $review->rating = $request->rating;
+        $review->status = 'Pending';
         $review->save();
-         return response()->json([
+        return response()->json([
             "status" => true,
             "message" => "Review Added.",
-           
+
         ]);
     }
 }
