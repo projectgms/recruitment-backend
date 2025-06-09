@@ -79,7 +79,7 @@ class AuthController extends Controller
             $subscription=new EmailSubscription();
             $subscription->email=$request->email;
             $subscription->save();
-return response()->json([
+            return response()->json([
                 'status' => true,
                 'message' => 'Thank you for subscription...We will get back to you soon.',
             ], 200);

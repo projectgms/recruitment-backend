@@ -116,18 +116,18 @@ class RecruiterController extends Controller
            'email.required' => 'Email is required.',
 
        ]);
-       if ($validator->fails()) {
-           return response()->json([
-               'status' => false,
-               'message' =>  $validator->errors(),
-            
-           ], 422);
-       }
-     $originalEmail = decrypt($request->email);
-     return response()->json([
-        'status' => true,
-        'message' => 'Decrypted Email.',
-        'data' => $originalEmail
-    ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' =>  $validator->errors(),
+                
+            ], 422);
+        }
+        $originalEmail = decrypt($request->email);
+        return response()->json([
+            'status' => true,
+            'message' => 'Decrypted Email.',
+            'data' => $originalEmail
+        ]);
     }
 }
