@@ -121,11 +121,8 @@ class JobSeekerProfileController extends Controller
         $personal->location = $request->addressLine1;
         $personal->blood_group = $request->bloodGroup;
         $personal->disability = $request->disability;
-
         $personal->language_known = implode(',', $request->knownLanguages);
-
         $personal->medical_history = $request->medicalHistory;
-
         $personal->save();
 
         $check_contact = JobSeekerContactDetails::where('user_id', '=', $auth->id)->count();

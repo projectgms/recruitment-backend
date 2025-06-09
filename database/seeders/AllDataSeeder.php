@@ -56,7 +56,7 @@ class AllDataSeeder extends Seeder
         );
 
         // Create Default SuperAdmin User
-        $password = bcrypt('12345');
+        $password = bcrypt('123456');
         $superAdminUser = User::firstOrCreate(
             ['email' => 'superadmin@example.com'],
             [

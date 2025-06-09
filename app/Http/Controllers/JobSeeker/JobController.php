@@ -110,7 +110,7 @@ class JobController extends Controller
                 $daysDifference = $currentDate->diffInDays($expirationDate, false);
                 $job->is_hot_job = ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
                 $job->expiration_time = Carbon::parse($job->expiration_date)->diffForHumans(); // Human-readable
-
+    $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
                 if ($save_job) {
                     $job->is_saved_job = true;
                 } else {
@@ -291,7 +291,7 @@ class JobController extends Controller
             } else {
                 $jobs->job_application_status = false;
             }
-            $jobs->posted_time = Carbon::parse($jobs->created_at)->diffForHumans();
+           $jobs->posted_time = Carbon::parse($jobs->created_at)->diffForHumans();
 
             return $jobs;
         });
