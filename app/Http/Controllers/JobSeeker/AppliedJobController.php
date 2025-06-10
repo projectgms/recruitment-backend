@@ -386,7 +386,7 @@ class AppliedJobController extends Controller
             $ch = curl_init();
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
+                CURLOPT_URL =>  env('MOCK_INTERVIEW_FINAL_REPORT'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
@@ -426,7 +426,7 @@ class AppliedJobController extends Controller
             $ch1 = curl_init();
 
             curl_setopt_array($ch1, [
-                CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
+                CURLOPT_URL => env('MOCK_INTERVIEW_CLEAR_CHAT'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postuserData, // 🟢 SEND AS FORM
@@ -509,7 +509,7 @@ class AppliedJobController extends Controller
             $ch = curl_init();
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'http://34.131.125.195:8000/talk',
+                CURLOPT_URL => env('MOCK_INTERVIEW_TALK'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
@@ -618,7 +618,7 @@ class AppliedJobController extends Controller
                 "skills" => $skillsString,
 
                 "role" => $request->role,
-                "experience" => $get_chat->total_year_exp . ' ' . $get_chat->total_month_exp,
+                "experience" => $request->experience,
                 "message" => $request->message,
 
             );
@@ -629,7 +629,7 @@ class AppliedJobController extends Controller
             $ch = curl_init();
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'http://34.131.125.195:8000/talk',
+                CURLOPT_URL => env('MOCK_INTERVIEW_TALK'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
@@ -722,7 +722,7 @@ class AppliedJobController extends Controller
         $ch = curl_init();
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => 'http://34.131.125.195:8000/final_report',
+            CURLOPT_URL => env('MOCK_INTERVIEW_FINAL_REPORT'),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM
@@ -798,7 +798,7 @@ class AppliedJobController extends Controller
         $ch = curl_init();
 
         curl_setopt_array($ch, [
-            CURLOPT_URL => 'http://34.131.125.195:8000/clear_chat',
+            CURLOPT_URL => env('MOCK_INTERVIEW_CLEAR_CHAT'),
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $postData, // 🟢 SEND AS FORM

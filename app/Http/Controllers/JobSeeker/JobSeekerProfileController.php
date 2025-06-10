@@ -105,7 +105,7 @@ class JobSeekerProfileController extends Controller
 
             // Create a unique filename using time and the original extension
             $filename = time() . '.' . $extension;
-            $imagePath = FileHelper::storeFile($request, 'jobseeker_profile_picture', 'jobseeker_profile_picture');
+            $imagePath = FileHelper::storeFile($request, 'profilePicture', 'jobseeker_profile_picture');
 
             // Save the file path to the profile_picture column in the model
             $personal->profile_picture = $imagePath;
@@ -309,7 +309,7 @@ class JobSeekerProfileController extends Controller
                 // ✅ Check if this document has a file uploaded (documents.0.file, documents.1.file, etc.)
                 if ($request->hasFile("documents.file")) {
                     $file = $request->file("documents.file");
-                    $filePath = FileHelper::storeFile($request, $file, 'jobseeker_documents');
+                    $filePath = FileHelper::storeFile($request, "documents.file", 'jobseeker_documents');
                 }
 
                 $newDocuments[] = [
@@ -2371,7 +2371,7 @@ class JobSeekerProfileController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-fso4.onrender.com/RESUME_GENERATOR',
+                CURLOPT_URL => env('GENERATE_RESUME_BY_JD'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),
@@ -2565,9 +2565,7 @@ class JobSeekerProfileController extends Controller
             $extension = $request->file('resume')->getClientOriginalExtension();
 
             $filename = time() . '.' . $extension;
-            $imagePath = FileHelper::storeFile($request,  $filename, 'jobseeker_resume');
-
-
+            $imagePath = FileHelper::storeFile($request,  'resume', 'jobseeker_resume');
 
             $resume->resume = $imagePath;
         }
@@ -2593,10 +2591,17 @@ class JobSeekerProfileController extends Controller
             ], 401);
         }
         $resume = GenerateResume::select('id', 'bash_id', 'resume_name', 'resume', 'resume_json', 'is_ai_generated')->where('user_id', $auth->id)->get();
-        $resume->transform(function ($resume) {
+        $resume->transform(function ($resume) use ($auth) {
             $disk = env('FILESYSTEM_DISK'); // Default to 'local' if not set in .env
 
-
+            $auto_apply = JobSeekerProfessionalDetails::where('user_id', $auth->id)->where('auto_apply_resume_id', $resume->id)->first();
+            if ($auto_apply) {
+                if ($auto_apply->auto_apply_job == 1) {
+                    $resume->auto_apply_job = true;
+                } else {
+                    $resume->auto_apply_job = false;
+                }
+            }
             if ($resume->resume) {
                 $resume->resume = FileHelper::getFileUrl($resume->resume);
             } else {

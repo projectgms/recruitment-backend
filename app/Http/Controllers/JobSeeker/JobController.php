@@ -97,7 +97,7 @@ class JobController extends Controller
                 }
                 $job->job_locations = json_decode($job->job_locations, true);
 
-                if (Carbon::now()->diffInDays(Carbon::parse($job->expiration_date), false) <= 3) {
+                if (Carbon::now()->diffInDays(Carbon::parse($job->expiration_date), false) <= 7) {
                     $job->expiration_time = true;
                 } else {
                     $job->expiration_time = false;
@@ -109,7 +109,7 @@ class JobController extends Controller
 
                 $daysDifference = $currentDate->diffInDays($expirationDate, false);
                 $job->is_hot_job = ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
-                $job->expiration_time = Carbon::parse($job->expiration_date)->diffForHumans(); // Human-readable
+             
     $job->posted_time  = Carbon::parse($job->created_at)->diffForHumans();
                 if ($save_job) {
                     $job->is_saved_job = true;
@@ -273,7 +273,7 @@ class JobController extends Controller
             $daysDifference = $currentDate->diffInDays($expirationDate, false);
             $jobs->is_hot_job = ($daysDifference >= 0 && $daysDifference <= 15) ? 'Yes' : 'No';
 
-            if (Carbon::now()->diffInDays(Carbon::parse($jobs->expiration_date), false) <= 3) {
+            if (Carbon::now()->diffInDays(Carbon::parse($jobs->expiration_date), false) <= 7) {
                 $jobs->expiration_time = true;
             } else {
                 $jobs->expiration_time = false;
@@ -886,7 +886,7 @@ class JobController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
+                CURLOPT_URL => env('PREAPARE_FOR_JOB'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),
@@ -977,7 +977,7 @@ class JobController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
+                CURLOPT_URL => env('PREAPARE_FOR_JOB'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),

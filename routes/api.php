@@ -51,7 +51,6 @@ Route::prefix('v1')->group(function () {
         Route::post('recruiter/change_password',[RecruiterAuthController::class,'change_password']);
         Route::post('recruiter/update_first_login',[RecruiterAuthController::class,'update_first_login']);
 
-
         Route::post('company_profile', [RecruiterCompanyController::class, 'company_profile']);
         Route::post('update_company_profile', [RecruiterCompanyController::class, 'update_company_profile']);
         Route::post('recruiter/add_company_event',[RecruiterCompanyController::class,'add_company_event']);
@@ -132,6 +131,7 @@ Route::prefix('v1')->group(function () {
         Route::post('admin/add_user', [AdminUserController::class, 'add_user']);
         Route::get('admin/view_user', [AdminUserController::class, 'view_user']);
         Route::post('admin/update_user', [AdminUserController::class, 'update_user']);
+        Route::post('admin/bulk_action_user',[AdminUserController::class,'bulk_action_user']);
         Route::post('admin/delete_user', [AdminUserController::class, 'delete_user']);
 
         //Admin and Recruiter Common routes

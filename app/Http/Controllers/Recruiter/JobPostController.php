@@ -138,6 +138,9 @@ class JobPostController extends Controller
             'user_id'=>'required',
             'job_title' => 'required',
             'location' => 'array|required',
+           // 'country'=>'required',
+           // 'state'=>'required',
+           // 'city'=>'required',
             'industry' => 'array|required',
             'contact_email' => 'required',
             'job_description' => 'required',
@@ -157,6 +160,9 @@ class JobPostController extends Controller
             'user_id.required' => 'User Id is required.',
             'job_title.required' => 'Job Title is required.',
             'location.required' => 'Location is required.',
+            //'country.required'=>'Country is required',
+           // 'state.required'=>'State is required.',
+            //'city.required'=>'City is required',
             'industry.required' => 'Industry is required.',
             'contact_email.required' => 'Email is required.',
             'job_description.required' => 'Job Description is required.',
@@ -231,7 +237,9 @@ class JobPostController extends Controller
             $jobs->job_type = $request->job_type;
             $jobs->location = json_encode($request->location);
              $jobs->round = json_encode($request->round);
-
+           // $jobs->country=$request->country;
+         //   $jobs->state=$request->state;
+           // $jobs->city=$request->city;
             $jobs->contact_email = $request->contact_email;
             $jobs->salary_range = $request->salary_range;
             $jobs->skills_required = json_encode($request->skills_required);
@@ -283,7 +291,7 @@ class JobPostController extends Controller
           
         $job_post=Jobs::select(
                         'jobs.user_id', 'jobs.id', 'jobs.round', 'jobs.bash_id', 'jobs.job_title',
-                        'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
+                        'jobs.job_description', 'jobs.job_type', 'jobs.location','jobs.country','jobs.state','jobs.city', 'jobs.contact_email',
                         'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
                         'jobs.status', 'jobs.is_hot_job', 'jobs.expiration_date', 'jobs.expiration_time',
                         'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
@@ -302,6 +310,9 @@ class JobPostController extends Controller
                             'job_description' => $job->job_description,
                             'job_type' => $job->job_type,
                             'location' => json_decode($job->location, true),
+                            'country'=>$job->country,
+                            'state'=>$job->state,
+                            'city'=>$job->city,
                             'contact_email' => $job->contact_email,
                             'salary_range' => $job->salary_range,
                             'skills_required' => json_decode($job->skills_required, true),
@@ -361,7 +372,7 @@ class JobPostController extends Controller
           
         $job_post=Jobs::select(
                         'jobs.user_id', 'jobs.id', 'jobs.ai_generate_question','jobs.round', 'jobs.bash_id', 'jobs.job_title',
-                        'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.contact_email',
+                        'jobs.job_description', 'jobs.job_type', 'jobs.location', 'jobs.country','jobs.state','jobs.city','jobs.contact_email',
                         'jobs.salary_range', 'jobs.skills_required', 'jobs.industry', 'jobs.experience_required',
                         'jobs.status', 'jobs.expiration_date', 'jobs.expiration_time',
                         'jobs.responsibilities', 'jobs.created_at', 'companies.name as company_name', 'jobs.company_id'
@@ -384,6 +395,9 @@ class JobPostController extends Controller
                             'job_description' => $job->job_description,
                             'job_type' => $job->job_type,
                             'location' => json_decode($job->location, true),
+                            'country'=>$job->country,
+                            'state'=>$job->state,
+                            'city'=>$job->city,
                             'contact_email' => $job->contact_email,
                             'salary_range' => $job->salary_range,
                             'skills_required' => json_decode($job->skills_required, true),
@@ -430,6 +444,9 @@ class JobPostController extends Controller
             'user_id'=>'required',
             'job_title' => 'required',
             'location' => 'array|required',
+            //'country'=>'required',
+            //'state'=>'required',
+           // 'city'=>'required',
             'industry' => 'array|required',
             'contact_email' => 'required',
             'job_description' => 'required',
@@ -450,6 +467,9 @@ class JobPostController extends Controller
             'user_id'=>'required',
             'job_title.required' => 'Job Title is required.',
             'location.required' => 'Location is required.',
+            //'country.required'=>'Country is required.',
+            //'state.required'=>'State is required.',
+            //'city.required'=>'City is required.',
             'industry.required' => 'Industry is required.',
             'contact_email.required' => 'Email is required.',
             'job_description.required' => 'Job Description is required.',
@@ -517,11 +537,13 @@ class JobPostController extends Controller
             $jobs->job_description = $request->job_description;
             $jobs->job_type = $request->job_type;
             $jobs->location = json_encode($request->location);
-
+           // $jobs->country=$request->country;
+          //  $jobs->state=$request->state;
+           // $jobs->city=$request->city;
             $jobs->contact_email = $request->contact_email;
             $jobs->salary_range = $request->salary_range;
             $jobs->skills_required = json_encode($request->skills_required);
- $jobs->ai_generate_question=$request->ai_generate_question;
+            $jobs->ai_generate_question=$request->ai_generate_question;
             $jobs->industry = json_encode($request->industry);
             $jobs->round = json_encode($request->round);
             $jobs->experience_required = $request->experience_required;
@@ -993,7 +1015,7 @@ public function get_interview_round()
                     );
      
                               curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-recruiter.onrender.com/generate_mcqs',
+                    CURLOPT_URL =>env('AI_GENERATE_MCQS'),
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jd),
@@ -1094,7 +1116,7 @@ public function get_interview_round()
                     );
      
                               curl_setopt_array($ch, [
-                    CURLOPT_URL => 'https://job-recruiter.onrender.com/predict_salary',
+                    CURLOPT_URL =>env('AI_SALARY_RANGE'),
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST => true,
                     CURLOPT_POSTFIELDS => json_encode($jd),

@@ -548,7 +548,7 @@ if ($deleted) {
             'email' => 'required',
             'mobile' => 'required',
             'password' => 'required',
-            'role_id' => 'required'
+            'role' => 'required'
 
         ], [
             'name.required' => 'Name is required.',
@@ -556,7 +556,7 @@ if ($deleted) {
             'email.required' => 'Email is required.',
             'mobile.required' => 'Mobile Number is required.',
             'password.required' => 'password is required.',
-            'role_id.required' => 'Role Id is required.'
+            'role.required' => 'Role Id is required.'
 
 
         ]);
@@ -586,7 +586,7 @@ if ($deleted) {
         } else {
 
            
-                $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->where('active','1')->first();
+                $roles = SuperAdminRole::select('id', 'role')->where('role', '=', $request->role)->where('active','1')->first();
            if($roles)
            {
             $oemuser = new User();
@@ -674,16 +674,16 @@ if ($deleted) {
             'name' => 'required',
             'email' => 'required',
             'mobile' => 'required',
-            'password' => 'required',
-            'role_id' => 'required'
+            //'password' => 'required',
+            'role' => 'required'
 
         ], [
             'id.required' => 'Id is required',
             'name.required' => 'Name is required.',
             'email.required' => 'Email is required.',
             'mobile.required' => 'Mobile Number is required.',
-            'password.required' => 'password is required.',
-            'role_id.required' => 'Role Id is required.'
+           // 'password.required' => 'password is required.',
+            'role.required' => 'Role Id is required.'
 
 
         ]);
@@ -712,7 +712,7 @@ if ($deleted) {
             ]);
         } else {
 
-           $roles = SuperAdminRole::select('id', 'role')->where('id', '=', $request->role_id)->where('active','1')->first();
+           $roles = SuperAdminRole::select('id', 'role')->where('role', '=', $request->role)->where('active','1')->first();
            if($roles)
            {
             $oemuser = User::find($request->id);
@@ -721,7 +721,7 @@ if ($deleted) {
             $oemuser->email = $request->email;
             $oemuser->role = $roles->role;
             $oemuser->role_id = $roles->id;
-            $oemuser->password = bcrypt($request->password);
+            //$oemuser->password = bcrypt($request->password);
             $oemuser->mobile = $request->mobile;
          
             $oemuser->save();
@@ -740,7 +740,55 @@ if ($deleted) {
         }
         }
     }
+ public function bulk_action_user(Request $request)
+    {
+        $auth = JWTAuth::user();
 
+        if (!$auth) {
+            return response()->json(
+                [
+                    'status' => false,
+                    'message' => 'Unauthorized',
+                ],
+                401
+            );
+        }
+
+        $validator = Validator::make($request->all(), [
+           'action' => 'required',
+           'ids'=>'array|required'
+        ], [
+            'action.required' => 'Action is required.',
+            'ids.required'=>'Id is required.'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' =>$validator->errors(),
+                
+            ], 422);
+        }
+        if($request->action=='enable')
+        {
+         User::whereIn('id', $request->ids)
+        ->update(['status' => 'Active']);
+        }
+        if($request->action=='disable')
+        {
+         User::whereIn('id', $request->ids)
+        ->update(['status' => 'Inactive']);
+        }
+         if($request->action=='delete')
+        {
+         User::whereIn('id', $request->ids)
+        ->update(['active' => '0']);
+        }
+           return response()->json([
+            "status" => true,
+            "message" => "Action Updated",
+           
+        ]);
+    }
     public function delete_user(Request $request)
     {
         $auth = JWTAuth::user();
