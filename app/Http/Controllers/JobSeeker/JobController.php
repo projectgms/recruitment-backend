@@ -886,7 +886,7 @@ class JobController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
+                CURLOPT_URL => env('PREAPARE_FOR_JOB'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),
@@ -977,7 +977,7 @@ class JobController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-recruiter.onrender.com/GENERATE_QUESTIONS',
+                CURLOPT_URL => env('PREAPARE_FOR_JOB'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),

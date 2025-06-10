@@ -674,7 +674,7 @@ if ($deleted) {
             'name' => 'required',
             'email' => 'required',
             'mobile' => 'required',
-            'password' => 'required',
+            //'password' => 'required',
             'role' => 'required'
 
         ], [
@@ -682,7 +682,7 @@ if ($deleted) {
             'name.required' => 'Name is required.',
             'email.required' => 'Email is required.',
             'mobile.required' => 'Mobile Number is required.',
-            'password.required' => 'password is required.',
+           // 'password.required' => 'password is required.',
             'role.required' => 'Role Id is required.'
 
 
@@ -721,7 +721,7 @@ if ($deleted) {
             $oemuser->email = $request->email;
             $oemuser->role = $roles->role;
             $oemuser->role_id = $roles->id;
-            $oemuser->password = bcrypt($request->password);
+            //$oemuser->password = bcrypt($request->password);
             $oemuser->mobile = $request->mobile;
          
             $oemuser->save();

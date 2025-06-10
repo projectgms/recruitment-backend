@@ -188,8 +188,7 @@ class RecruiterCompanyController extends Controller
 
                 foreach ($request->file('event_images') as $file) 
                 {
-
-                    $storedPath = FileHelper::storeFile($request,  'event_images', 'company_events');
+                    $storedPath = FileHelper::storeFile($request,  $file, 'company_events');
 
                     $imagePaths[] = $storedPath;
                 }

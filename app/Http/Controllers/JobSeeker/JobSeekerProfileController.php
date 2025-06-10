@@ -2371,7 +2371,7 @@ class JobSeekerProfileController extends Controller
 
 
             curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://job-fso4.onrender.com/RESUME_GENERATOR',
+                CURLOPT_URL => env('GENERATE_RESUME_BY_JD'),
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
                 CURLOPT_POSTFIELDS => json_encode($jsonData),

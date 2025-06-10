@@ -21,8 +21,16 @@ class FileHelper
       public static function storeFile(Request $request, $fieldName, $directory )
     {
            $disk = env('FILESYSTEM_DISK');
-             $file = $request->file($fieldName); 
-     //    $file = $fieldName;
+            if ($fieldName instanceof \Illuminate\Http\UploadedFile)
+             {
+                $file = $fieldName;
+            } else {
+                $file = $request->file($fieldName);
+            }
+
+            if (!$file || !($file instanceof \Illuminate\Http\UploadedFile)) {
+                return null;
+            }
            if (!Storage::disk($disk)->exists($directory)) 
            {
               Storage::disk($disk)->makeDirectory($directory);

@@ -164,7 +164,7 @@ class ResumeController extends Controller
     // Step 1: Send request to external API
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => 'https://job-fso4.onrender.com/ANALYSER',
+        CURLOPT_URL => env('AI_RESUME_ANALYSIS'),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $resume->resume_json,
