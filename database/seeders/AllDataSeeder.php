@@ -93,15 +93,14 @@ class AllDataSeeder extends Seeder
             'admin-dashboard',
             'jobseeker-management',
             'recruiter-management',
-            'subscription-payment',
-            'reports-analytics',
+            'subscription-management',
+            'report-analytics',
             'user-management',
             'role-management',
-            'role-permission',
-            'profile',
+            'permission-management',
+            'support-system',
             'setting',
-            'earning',
-           
+         
         ];
 
         foreach ($menus as $menu) {

@@ -21,7 +21,12 @@ class FileHelper
       public static function storeFile(Request $request, $fieldName, $directory )
     {
            $disk = env('FILESYSTEM_DISK');
-         $file = $fieldName;
+             $file = $request->file($fieldName); 
+     //    $file = $fieldName;
+           if (!Storage::disk($disk)->exists($directory)) 
+           {
+              Storage::disk($disk)->makeDirectory($directory);
+           }
         $extension = $file->getClientOriginalExtension();
         $filename =  time() . '_' . uniqid() . '.' .$extension;
 

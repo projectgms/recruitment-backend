@@ -186,9 +186,10 @@ class RecruiterCompanyController extends Controller
 
                 $imagePaths = []; // To store paths of all uploaded files
 
-                foreach ($request->file('event_images') as $file) {
+                foreach ($request->file('event_images') as $file) 
+                {
 
-                    $storedPath = FileHelper::storeFile($request,  $file, 'company_events');
+                    $storedPath = FileHelper::storeFile($request,  'event_images', 'company_events');
 
                     $imagePaths[] = $storedPath;
                 }

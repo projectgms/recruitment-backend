@@ -160,8 +160,6 @@ class JobSeekerAuthController extends Controller
 
     public function profile()
     {
-
-
         $user = JWTAuth::user();
 
         // Check if user is null (if token is invalid or expired)
