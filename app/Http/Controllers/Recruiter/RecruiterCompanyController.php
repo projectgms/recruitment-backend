@@ -74,7 +74,7 @@ class RecruiterCompanyController extends Controller
                 401
             );
         }
-        $validator = Validator::make($request->all(), [
+     $validator = Validator::make($request->all(), [
 
             'user_id' => 'required',
             'name' => 'required',
@@ -83,7 +83,7 @@ class RecruiterCompanyController extends Controller
             'locations' => 'array|required',
             'company_size' => 'required',
             'company_description' => 'required',
-            'company_logo' => 'required',
+            'company_logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp',
             'social_profiles' => '',
             'facebook_url' => '',
             'instagram_url' => '',
@@ -99,8 +99,9 @@ class RecruiterCompanyController extends Controller
             'locations.required' => 'Location is required.',
             'company_size.required' => 'Company Size is required.',
             'company_description.required' => 'Company Description is required.',
-            'company_logo.required' => 'Company Logo is required.'
-
+             'company_logo.image' => 'The company logo must be an image.',
+    'company_logo.mimes' => 'The company logo must be a file of type: jpeg, png, jpg, gif, webp,svg.',
+ 
         ]);
         if ($validator->fails()) {
             return response()->json([
