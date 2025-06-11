@@ -1105,7 +1105,6 @@ class JobController extends Controller
         $validator = Validator::make($request->all(), [
             'auto_apply' => 'required',
             'resume_id' => 'required',
-
         ], [
             'auto_apply.required' => 'Auto Apply status is required.',
             'resume_id.required' => 'Resume Id is required.'
@@ -1115,7 +1114,7 @@ class JobController extends Controller
             'auto_apply' => 'required',
             'resume_id' => 'required',
         ], [
-            'auto_apply.required' => 'JAuto Apply status is required.',
+            'auto_apply.required' => 'Auto Apply status is required.',
             'resume_id.required' => 'Resume Id is required.'
         ]);
         if ($validator->fails()) {
